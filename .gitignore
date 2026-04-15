@@ -14,3 +14,7 @@ dist/
 .gitdb/
 ui/node_modules/
 ui/dist/
+ui/package-lock.json
+ui/yarn.lock
+ui/pnpm-lock.yaml
+ui/npm-debug.log*

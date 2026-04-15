@@ -1,6 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg-a: #f6f8ff;
+  --bg-b: #edf7ef;
+  --bg-c: #fff8ea;
+  --text-strong: #1f2335;
+  --text-soft: #5f6476;
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-border: rgba(105, 112, 140, 0.2);
+  --line: rgba(105, 112, 140, 0.2);
+  --accent: #2043d9;
+  --accent-soft: #dbe4ff;
+  --warning: #7f540f;
+  --danger: #9b2226;
+  --shadow: 0 18px 40px rgba(27, 45, 93, 0.12);
+}
 
 html,
 body {
@@ -8,7 +26,410 @@ body {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
-    "Apple Color Emoji", "Segoe UI Emoji";
+  margin: 0;
+  color: var(--text-strong);
+  font-family: "Outfit", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(169, 198, 255, 0.5), transparent 32%),
+    radial-gradient(circle at 92% 18%, rgba(186, 234, 201, 0.48), transparent 32%),
+    radial-gradient(circle at 20% 95%, rgba(255, 229, 176, 0.5), transparent 36%),
+    linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 50%, var(--bg-c) 100%);
+}
+
+#root {
+  min-height: 100%;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(185deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(10px);
+  padding: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.brand-mark {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.8rem;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #1d2a72, #2043d9);
+  color: #ffffff;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.brand-name {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.nav-button {
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  padding: 0.66rem 0.82rem;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: transform 120ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.nav-button:hover {
+  transform: translateX(3px);
+}
+
+.nav-button-idle {
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--text-strong);
+}
+
+.nav-button-active {
+  background: linear-gradient(135deg, #1e3fca, #20308a);
+  color: #ffffff;
+  border-color: rgba(17, 31, 100, 0.5);
+}
+
+.sidebar-footnote {
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--line);
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.app-main {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 0.8rem;
+}
+
+.topbar-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.topbar-subtitle {
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+
+.stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: fade-in-up 260ms ease;
+}
+
+.panel-title {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4));
+  border-bottom: 1px solid var(--line);
+  padding: 0.8rem 1rem;
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #31364a;
+}
+
+.panel-body {
+  padding: 1rem;
+}
+
+.commit-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.commit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.72);
+  gap: 0.8rem;
+}
+
+.hash-chip {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.16rem 0.55rem;
+  border: 1px solid #c6d2ff;
+  background: #eef2ff;
+  color: #1b2d86;
+  font-family: "Space Grotesk", monospace;
+  font-size: 0.78rem;
+  margin-bottom: 0.3rem;
+}
+
+.commit-message {
+  font-size: 0.93rem;
+  font-weight: 500;
+}
+
+.commit-meta {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.field {
+  width: 100%;
+  border: 1px solid #cfd6eb;
+  border-radius: 0.68rem;
+  padding: 0.58rem 0.65rem;
+  font-size: 0.9rem;
+  background: #ffffff;
+}
+
+.field:focus {
+  outline: 2px solid #90a8ff;
+  outline-offset: 1px;
+}
+
+.btn {
+  border-radius: 0.7rem;
+  border: 1px solid transparent;
+  padding: 0.52rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(145deg, #1e3fca, #20308a);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #cfd6eb;
+  color: #283146;
+}
+
+.sql-block,
+.json-block {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 0.76rem;
+}
+
+.sql-block.compact {
+  margin-top: 0.6rem;
+  max-height: 240px;
+}
+
+.warning-list {
+  margin: 0;
+  padding-left: 1.05rem;
+  color: var(--warning);
+  font-size: 0.9rem;
+}
+
+.error-inline {
+  color: var(--danger);
+  margin-top: 0.65rem;
+  font-size: 0.86rem;
+}
+
+.error-banner {
+  margin-bottom: 0.85rem;
+  border: 1px solid #f0c3c4;
+  background: #fff1f2;
+  color: var(--danger);
+  border-radius: 0.7rem;
+  padding: 0.72rem;
+  font-size: 0.88rem;
+}
+
+.schema-head {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.schema-summary,
+.empty-state {
+  font-size: 0.88rem;
+  color: var(--text-soft);
+}
+
+.table-stack {
+  margin-top: 0.95rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.table-card {
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  overflow: hidden;
+}
+
+.table-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.58rem 0.75rem;
+  background: rgba(237, 242, 255, 0.8);
+  border-bottom: 1px solid var(--line);
+}
+
+.table-name {
+  font-family: "Space Grotesk", monospace;
+  font-size: 0.85rem;
+}
+
+.table-count {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+
+.table-card-body {
+  padding: 0.75rem;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.schema-table {
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.schema-table th,
+.schema-table td {
+  text-align: left;
+  padding: 0.42rem 0.5rem;
+  border-bottom: 1px solid rgba(110, 120, 156, 0.14);
+}
+
+.schema-table thead {
+  color: #4f566f;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+.ddl-wrap {
+  margin-top: 0.7rem;
+}
+
+.ddl-summary {
+  cursor: pointer;
+  color: var(--text-soft);
+  font-size: 0.74rem;
+}
+
+@media (min-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1.3fr 1.3fr 1fr auto;
+  }
+
+  .schema-head {
+    grid-template-columns: 1.5fr auto;
+    align-items: center;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .commit-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
