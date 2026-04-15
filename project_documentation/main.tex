@@ -1,0 +1,1030 @@
+\documentclass[12pt, a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{setspace}
+\usepackage{mdframed}
+\usepackage{amsmath}
+\tcbuselibrary{skins, breakable}
+
+% ── Colors ────────────────────────────────────────────────────────────────────
+\definecolor{primaryblue}{HTML}{1A73E8}
+\definecolor{darkblue}{HTML}{0D47A1}
+\definecolor{lightgray}{HTML}{F5F5F5}
+\definecolor{codebg}{HTML}{1E1E2E}
+\definecolor{codetext}{HTML}{CDD6F4}
+\definecolor{accent}{HTML}{E53935}
+\definecolor{mysqlorange}{HTML}{E8710A}
+\definecolor{tableheader}{HTML}{1A73E8}
+
+% ── Hyperref Setup ────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    pdftitle={GitDB: Version Control System for MySQL Databases},
+    pdfauthor={Group Project - DBMS}
+}
+
+% ── Section Formatting ────────────────────────────────────────────────────────
+\titleformat{\section}
+  {\large\bfseries\color{darkblue}}
+  {\thesection.}{0.5em}{}[\color{primaryblue}\titlerule]
+
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{primaryblue}}
+  {\thesubsection.}{0.5em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{primaryblue!80}}
+  {\thesubsubsection.}{0.5em}{}
+
+\titlespacing*{\section}{0pt}{1.2em}{0.6em}
+\titlespacing*{\subsection}{0pt}{0.8em}{0.4em}
+\titlespacing*{\subsubsection}{0pt}{0.6em}{0.3em}
+
+% ── Code Listing Style ────────────────────────────────────────────────────────
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{codetext},
+    keywordstyle=\color{cyan}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{yellow},
+    breaklines=true,
+    frame=none,
+    xleftmargin=1em,
+    xrightmargin=1em,
+    aboveskip=0.5em,
+    belowskip=0.5em,
+    showstringspaces=false,
+    numbers=none,
+}
+
+% ── Custom Boxes ──────────────────────────────────────────────────────────────
+\tcbset{
+    commandbox/.style={
+        colback=codebg,
+        colframe=primaryblue,
+        coltext=codetext,
+        fonttitle=\bfseries\color{white},
+        attach boxed title to top left={yshift=-2mm, xshift=4mm},
+        boxed title style={colback=primaryblue, colframe=primaryblue},
+        arc=4pt,
+        boxrule=0.8pt,
+        left=6pt, right=6pt, top=8pt, bottom=6pt,
+        breakable
+    },
+    infobox/.style={
+        colback=lightgray,
+        colframe=primaryblue,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    },
+    warningbox/.style={
+        colback=mysqlorange!8,
+        colframe=mysqlorange,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    }
+}
+
+% ── Header / Footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{\textbf{GitDB}} — Version Control for MySQL}
+\fancyhead[R]{\small\textcolor{gray}{DBMS Mini Project}}
+\fancyfoot[C]{\small\textcolor{gray}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{primaryblue}\leaders\hrule height \headrulewidth\hfill}}
+
+% ── Document ──────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+
+    {\Huge\bfseries\color{darkblue} GitDB}\\[0.4em]
+    {\Large\color{primaryblue} Version Control System for MySQL Databases}\\[0.2em]
+    {\small\color{mysqlorange}\textit{Git for MySQL}}\\[0.2em]
+    {\small\color{gray}\rule{8cm}{0.5pt}}
+
+    \vspace{1.5cm}
+
+    \begin{tcolorbox}[infobox, width=0.85\textwidth]
+        \centering
+        {\normalsize\textit{A MySQL-native, state-based database versioning tool with Git-like semantics,\\
+        providing commit, diff, checkout, and restore operations\\
+        for MySQL databases --- with all metadata stored in a dedicated \texttt{gitdb\_meta} database.}}
+    \end{tcolorbox}
+
+    \vspace{1.5cm}
+
+    {\large\textbf{Institution:} PICT, Pune}\\[0.5em]
+    {\large\textbf{Subject:} DISL}\\[0.5em]
+    {\large\textbf{Project Type:} Mini Project}\\[0.5em]
+    {\large\textbf{Class:} SY-11 \quad|\quad \textbf{Lab Batch:} F-11}\\[0.5em]
+    {\large\textbf{Group Size:} 4 Members}\\[1em]
+
+    \vspace{0.5cm}
+
+    \textbf{Team Members:}\\
+    \vspace{0.5em}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{>{\centering\arraybackslash}p{1cm} >{\arraybackslash}p{5cm} >{\centering\arraybackslash}p{2.5cm}}
+    \toprule
+    \textbf{Sr.} & \textbf{Name} & \textbf{Roll No.} \\
+    \midrule
+    1 & Aditya Malode     & 23325 \\
+    2 & Rohan Natekar     & 23330 \\
+    3 & Aarush Oak        & 23332 \\
+    4 & Prathamesh Kinagi & 23340 \\
+    \bottomrule
+    \end{tabular}
+
+    \vspace{2.5cm}
+    {\small\color{gray} Academic Year 2025--26}
+    \vfill
+    {\small\color{gray} Compiled on \today}
+\end{titlepage}
+
+% ── Abstract ──────────────────────────────────────────────────────────────────
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+\begin{onehalfspacing}
+
+Version control has become a foundational pillar of modern software engineering.
+Systems like Git allow developers to snapshot code, inspect historical changes,
+revert to any prior state, and collaborate across teams with full auditability.
+Yet despite MySQL databases being a critical component of almost every production
+software system, they have never enjoyed an equivalent first-class versioning
+mechanism. Schema changes are typically managed through manually written migration
+scripts that are fragile, difficult to audit, and entirely disconnected from the
+data they govern. Data rollbacks, when needed, require either expensive full
+database dumps or complex reconstruction --- neither of which resembles the
+intuitive, commit-and-revert workflow developers take for granted with source code.
+
+\textbf{GitDB} addresses this gap directly. It is a \textbf{MySQL-native},
+state-based version control system designed to bring Git-like semantics ---
+commit, log, diff, and checkout --- to MySQL database management without requiring
+developers to manually author SQL migration scripts. The central idea is simple:
+instead of tracking \textit{instructions} for how to reach a state, GitDB tracks
+the \textit{state itself}.
+
+At every commit, a complete snapshot of the target MySQL database's schema (DDL)
+and data is captured and persisted into a dedicated metadata database named
+\texttt{gitdb\_meta}, which runs as a separate MySQL database on the same server.
+This clean separation mirrors the way Git's \texttt{.git/} directory is isolated
+from the source files it tracks --- the versioning layer never pollutes the
+database being versioned. The \texttt{gitdb\_meta} database is built around
+\textbf{four entities}: \texttt{user} (authentication and authorship),
+\texttt{repository} (target database connection config and HEAD pointer),
+\texttt{commits} (hash, message, author, timestamp, parent hash), and
+\texttt{snapshots} (serialised schema and data per table per commit). The HEAD
+pointer is stored directly as \texttt{current\_hash} inside \texttt{repository},
+keeping the design normalised and eliminating the need for a separate head table.
+
+Each commit is identified by a SHA-256 hash computed from its content
+serialisation and the hash of its parent commit, forming an immutable,
+tamper-evident \textbf{Merkle chain}. Since GitDB does not support branching,
+commit history is always a \textbf{linear linked list} --- each commit has at
+most one parent and at most one child. The system's core technical contribution
+is its \textbf{diff engine}, which takes two commit snapshots from
+\texttt{gitdb\_meta} and automatically generates the MySQL SQL necessary to
+transition the live database from one state to the other. Schema diffing is
+performed at the Abstract Syntax Tree (AST) level using \texttt{sqlglot},
+correctly identifying added tables, dropped tables, and altered columns. Data
+diffing uses a primary-key-anchored algorithm operating in $O(n)$ time,
+producing \texttt{INSERT}, \texttt{UPDATE}, and \texttt{DELETE} statements for
+rows that are new, changed, or removed.
+
+A key engineering challenge specific to MySQL is that DDL statements
+(\texttt{ALTER TABLE}, \texttt{DROP TABLE}, \texttt{CREATE TABLE}) issue implicit
+commits and cannot be rolled back in a standard transaction. GitDB handles this
+through a \textbf{two-phase checkout strategy}: schema changes are applied and
+validated first; data patches are then applied inside an explicit transaction
+with rollback on failure. If schema application fails, the pre-checkout snapshot
+in \texttt{gitdb\_meta} is used to restore the prior state, guaranteeing the
+database is never left inconsistent.
+
+The system is delivered through two complementary interfaces. A
+\textbf{command-line interface} built with \texttt{click} and \texttt{rich}
+provides Git-familiar commands: \texttt{gitdb init}, \texttt{gitdb commit},
+\texttt{gitdb log}, \texttt{gitdb diff}, \texttt{gitdb checkout}, and
+\texttt{gitdb status}. A \textbf{web-based user interface} built in React~18
+with Tailwind CSS offers a visual commit graph rendered using \texttt{react-flow}
+and a side-by-side diff viewer via \texttt{@git-diff-view/react}, communicating
+with a lightweight Flask REST API.
+
+Academically, GitDB demonstrates MySQL schema introspection via
+\texttt{information\_schema}, the practical implications of MySQL's DDL
+auto-commit behaviour on transaction design, structural DDL comparison at the
+AST level, cryptographic integrity via Merkle hashing, and the foundational role
+of primary keys as stable row identifiers --- all demonstrated through working
+code against the world's most widely deployed open-source relational database.
+
+\end{onehalfspacing}
+
+\vspace{1.5em}
+
+\begin{tcolorbox}[infobox]
+\textbf{Keywords:} MySQL, Version Control, State-Based Snapshotting, Schema
+Diffing, SQL Patch Generation, \texttt{gitdb\_meta}, Merkle Hash Chain, Linear
+Commit History, DDL Auto-Commit, Two-Phase Checkout, Python, React, Flask
+\end{tcolorbox}
+
+% ── Section 1: Introduction ───────────────────────────────────────────────────
+\newpage
+\section{Introduction and Motivation}
+
+MySQL is the world's most widely deployed open-source relational database,
+powering applications from small web projects to large-scale production systems.
+Yet despite this ubiquity, MySQL development workflows lack a native, intuitive
+mechanism for versioning both schema and data together. Schema changes are managed
+through ad-hoc \texttt{ALTER TABLE} scripts, Flyway migrations, or Liquibase
+changelogs --- none of which version data alongside schema, and none of which
+offer Git's commit-and-revert ergonomics.
+
+GitDB fundamentally reimagines MySQL database version control by adopting a
+\textbf{state-based approach} instead of an instruction-based one. Rather than
+tracking how to reach a state, GitDB tracks the state itself through complete
+snapshots stored in a dedicated \texttt{gitdb\_meta} MySQL database.
+
+\vspace{0.5em}
+\textbf{Problems with the status quo:}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{Fragility:} Migration scripts can fail mid-execution, leaving
+    MySQL databases in undefined states
+    \item \textbf{Audit Difficulty:} Understanding current schema requires
+    mentally replaying all migrations in order
+    \item \textbf{Data Disconnection:} Schema migrations are entirely separate
+    from data versioning
+    \item \textbf{No Easy Rollback:} Reverting requires writing additional
+    down-migrations or restoring from \texttt{mysqldump} backups
+    \item \textbf{MySQL DDL Complexity:} MySQL DDL statements auto-commit,
+    making transactional schema management non-trivial
+\end{itemize}
+
+% ── Section 2: Core Features ──────────────────────────────────────────────────
+\section{Core Features and Objectives}
+
+\subsection{MySQL-Native State-Based Snapshotting}
+
+At every commit, GitDB captures a complete snapshot of the target MySQL database
+using \texttt{information\_schema} and \texttt{SHOW CREATE TABLE} for schema, and
+\texttt{SELECT * ... ORDER BY \{pk\_columns\}} for data. Both are serialised as JSON
+and written into the \texttt{snapshots} table of \texttt{gitdb\_meta}.
+
+\subsection{The \texttt{gitdb\_meta} Database}
+
+All versioning metadata lives in a dedicated MySQL database named
+\texttt{gitdb\_meta} on the same MySQL server instance. This is analogous to
+Git's \texttt{.git/} directory --- the versioning layer is fully isolated from
+the target database being versioned.
+
+The metadata schema consists of \textbf{four entities}. The HEAD pointer ---
+which tracks the current commit for each repository --- is stored as the
+\texttt{current\_hash} column directly inside the \texttt{repository} table,
+eliminating the need for a separate \texttt{head} table and keeping the design
+cleanly normalised.
+
+\vspace{0.5em}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3cm} >{\ttfamily}p{4.5cm} X}
+\rowcolor{tableheader}
+\textcolor{white}{\normalfont\bfseries Entity} &
+\textcolor{white}{\normalfont\bfseries Key Columns} &
+\textcolor{white}{\normalfont\bfseries Purpose} \\
+\midrule
+user       & user\_id, username,\newline email, password\_hash    & Authentication, authorship, and soft-delete via \texttt{is\_active} \\
+\rowcolor{lightgray}
+repository & repo\_id, user\_id (FK),\newline current\_hash (FK)  & Connection config for target DB; \texttt{current\_hash} serves as the HEAD pointer \\
+commits    & hash, repo\_id (FK),\newline parent\_hash, author\_id (FK) & One row per commit; forms the linear Merkle chain \\
+\rowcolor{lightgray}
+snapshots  & id, commit\_hash (FK),\newline table\_name, ddl\_json, rows\_json & Full schema + data snapshot per table per commit \\
+\end{tabularx}
+\vspace{0.5em}
+
+\subsection{Automatic Diff Engine}
+
+The diff engine reads two snapshots from \texttt{gitdb\_meta} and generates valid
+MySQL SQL to transition between them:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{Schema Diffing:} AST-level comparison using \texttt{sqlglot}
+    to identify added tables, dropped tables, and altered columns
+    \item \textbf{Data Diffing:} Primary-key-anchored algorithm producing
+    \texttt{INSERT}, \texttt{UPDATE}, \texttt{DELETE} statements in $O(n)$ time
+\end{itemize}
+
+\subsection{Merkle Hash Chain}
+
+Each commit is identified by a SHA-256 hash derived from the serialised snapshot
+content and the parent commit's hash:
+
+\begin{tcolorbox}[commandbox, title=Hash Construction]
+\begin{lstlisting}
+hash = SHA256(serialise(schema, data) + parent_hash)
+\end{lstlisting}
+\end{tcolorbox}
+
+This forms an immutable, tamper-evident chain. Since GitDB supports only a
+\textbf{linear commit history} (no branching or merging), each commit has at most
+one parent and at most one child --- the history is strictly a linked list, not a
+DAG. Any modification to a historical snapshot immediately invalidates all
+subsequent hashes, making unauthorised history rewriting detectable.
+
+\subsection{Two-Phase Checkout for MySQL DDL Safety}
+
+MySQL DDL statements issue implicit commits and cannot be rolled back. GitDB
+handles this through a two-phase checkout strategy:
+
+\begin{tcolorbox}[warningbox]
+\textbf{MySQL DDL Note:} Unlike SQLite (which supports transactional DDL),
+MySQL's \texttt{ALTER TABLE}, \texttt{DROP TABLE}, and \texttt{CREATE TABLE}
+statements auto-commit. A simple \texttt{BEGIN} / \texttt{ROLLBACK} cannot undo
+them. GitDB's two-phase checkout accounts for this explicitly.
+\end{tcolorbox}
+
+\begin{tcolorbox}[infobox]
+\textbf{Two-Phase Checkout Workflow:}
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.2em]
+    \item \textbf{Phase 1 --- Schema:} Validate and apply all DDL statements
+    (\texttt{ALTER TABLE}, \texttt{CREATE TABLE}, \texttt{DROP TABLE}). On
+    failure, re-apply the original schema from the \texttt{gitdb\_meta} snapshot.
+    \item \textbf{Phase 2 --- Data:} Apply all \texttt{INSERT} /
+    \texttt{UPDATE} / \texttt{DELETE} statements inside an explicit
+    \texttt{BEGIN} / \texttt{COMMIT} transaction. On failure, \texttt{ROLLBACK}
+    is called automatically.
+\end{enumerate}
+Since the rollback target is always a known-good snapshot stored in
+\texttt{gitdb\_meta}, the database is guaranteed to return to a consistent state
+even when DDL auto-commit prevents traditional rollback. On success,
+\texttt{repository.current\_hash} is updated to the checked-out commit hash.
+\end{tcolorbox}
+
+\subsection{Dual Interface Architecture}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{CLI:} Git-familiar commands (\texttt{init}, \texttt{commit},
+    \texttt{log}, \texttt{diff}, \texttt{checkout}, \texttt{status}) built with
+    \texttt{click} and \texttt{rich}
+    \item \textbf{Web UI:} Visual commit history, side-by-side diff viewer,
+    schema browser, built in React~18 + Tailwind CSS
+\end{itemize}
+
+% ── Section 3: System Architecture ───────────────────────────────────────────
+\section{System Architecture}
+
+\subsection{Overall Architecture}
+
+GitDB consists of four loosely coupled layers:
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{Target MySQL DB} --- the database being versioned (any user
+    MySQL database)
+    \item \textbf{Core Engine} --- Python module handling snapshotting, hashing,
+    diffing, and checkout
+    \item \textbf{gitdb\_meta} --- the dedicated MySQL metadata database storing
+    all user, repository, commit, and snapshot data
+    \item \textbf{Interfaces} --- CLI (click/rich) and Web UI (React + Flask
+    REST API)
+\end{enumerate}
+
+\subsection{Schema Introspection via \texttt{information\_schema}}
+
+GitDB uses MySQL's \texttt{information\_schema} to programmatically capture the
+full database schema at commit time:
+
+\begin{tcolorbox}[commandbox, title=Schema Capture Queries]
+\begin{lstlisting}[language=SQL]
+-- Get all user tables
+SELECT TABLE_NAME
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = %s AND TABLE_TYPE = 'BASE TABLE';
+
+-- Get column definitions per table
+SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE,
+       COLUMN_DEFAULT, COLUMN_KEY, EXTRA
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+ORDER BY ORDINAL_POSITION;
+
+-- Get full DDL for AST parsing
+SHOW CREATE TABLE `table_name`;
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Diff Engine Design}
+
+\subsubsection{Schema Diffing (AST Level)}
+
+Schema comparison uses \texttt{sqlglot} to parse the captured
+\texttt{SHOW CREATE TABLE} DDL into Abstract Syntax Trees. This allows GitDB to
+understand SQL semantics rather than doing naive text comparison:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Added tables $\rightarrow$ generate \texttt{CREATE TABLE} statements
+    \item Dropped tables $\rightarrow$ generate \texttt{DROP TABLE} statements
+    \item Added columns $\rightarrow$ generate \texttt{ALTER TABLE ... ADD COLUMN}
+    \item Dropped columns $\rightarrow$ generate \texttt{ALTER TABLE ... DROP COLUMN}
+    \item Modified column definitions $\rightarrow$ generate
+    \texttt{ALTER TABLE ... MODIFY COLUMN}
+\end{itemize}
+
+\subsubsection{Data Diffing (Primary-Key Anchored)}
+
+Data comparison indexes both snapshots by primary key and compares them as
+dictionaries:
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+    \item Both old and new snapshots are loaded from \texttt{gitdb\_meta.snapshots}
+    and indexed by primary key
+    \item Keys present in new but not old $\rightarrow$ \texttt{INSERT} statements
+    \item Keys present in both but with differing values $\rightarrow$
+    \texttt{UPDATE} statements
+    \item Keys present in old but not new $\rightarrow$ \texttt{DELETE} statements
+\end{enumerate}
+
+This algorithm operates in $\mathbf{O(n)}$ time with respect to the number of
+rows. Tables without a primary key cannot be diffed and are flagged at commit
+time with a clear diagnostic message.
+
+\subsection{\texttt{gitdb\_meta} Schema}
+
+The complete DDL for the four-entity \texttt{gitdb\_meta} database is as follows.
+Note that the \texttt{ALTER TABLE} on \texttt{repository} is required after
+\texttt{commits} is created, to resolve the circular foreign key dependency
+between the two tables.
+
+\begin{tcolorbox}[commandbox, title=gitdb\_meta Complete DDL]
+\begin{lstlisting}[language=SQL]
+CREATE DATABASE IF NOT EXISTS gitdb_meta;
+USE gitdb_meta;
+
+-- Users (authentication and authorship)
+CREATE TABLE user (
+    user_id       INT          NOT NULL AUTO_INCREMENT,
+    username      VARCHAR(50)  NOT NULL,
+    email         VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name     VARCHAR(100) NOT NULL,
+    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    UNIQUE KEY uq_username (username),
+    UNIQUE KEY uq_email    (email)
+);
+
+-- Repositories (connection config + HEAD pointer)
+CREATE TABLE repository (
+    repo_id          INT          NOT NULL AUTO_INCREMENT,
+    user_id          INT          NOT NULL,
+    repo_name        VARCHAR(100) NOT NULL,
+    target_db_name   VARCHAR(100) NOT NULL,
+    db_host          VARCHAR(100) NOT NULL,
+    db_port          INT          NOT NULL DEFAULT 3306,
+    db_user          VARCHAR(50)  NOT NULL,
+    db_password_key  VARCHAR(100) NULL,     -- keyring key, not the password
+    current_hash     CHAR(64)     NULL,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (repo_id),
+    CONSTRAINT fk_repo_user
+        FOREIGN KEY (user_id) REFERENCES user (user_id)
+);
+
+-- Commits (linear Merkle chain, no branching)
+CREATE TABLE commits (
+    hash         CHAR(64)     NOT NULL,
+    repo_id      INT          NOT NULL,
+    parent_hash  CHAR(64)     NULL,
+    author_id    INT          NOT NULL,
+    message      TEXT         NOT NULL,
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (hash),
+    UNIQUE KEY uq_parent_hash (parent_hash),   -- enforces linear chain at DB level
+    CONSTRAINT fk_commit_repo
+        FOREIGN KEY (repo_id)     REFERENCES repository (repo_id),
+    CONSTRAINT fk_commit_parent
+        FOREIGN KEY (parent_hash) REFERENCES commits    (hash),
+    CONSTRAINT fk_commit_author
+        FOREIGN KEY (author_id)   REFERENCES user       (user_id)
+);
+
+-- Add HEAD FK on repository after commits table exists
+ALTER TABLE repository
+    ADD CONSTRAINT fk_repo_head
+        FOREIGN KEY (current_hash) REFERENCES commits (hash);
+
+-- Snapshots (full schema + data per table per commit)
+CREATE TABLE snapshots (
+    id           BIGINT       NOT NULL AUTO_INCREMENT,
+    commit_hash  CHAR(64)     NOT NULL,
+    table_name   VARCHAR(255) NOT NULL,
+    ddl_json     LONGTEXT     NOT NULL,
+    rows_json    LONGTEXT     NOT NULL,
+    row_count    INT          NOT NULL,
+    captured_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_commit_table (commit_hash, table_name),
+    CONSTRAINT fk_snap_commit
+        FOREIGN KEY (commit_hash) REFERENCES commits (hash)
+);
+\end{lstlisting}
+\end{tcolorbox}
+
+% ── Section 4: Database Structure ────────────────────────────────────────────
+\section{Database Structure and Entity Relationships}
+
+\subsection{Entity Overview}
+
+The \texttt{gitdb\_meta} database consists of four entities. The HEAD concept
+from the original Git analogy is represented as \texttt{current\_hash} directly
+inside \texttt{repository} rather than as a separate table, keeping the schema
+lean and referentially clean.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{>{\bfseries\ttfamily}l c c l}
+\toprule
+\textbf{Entity} & \textbf{PK Type} & \textbf{Rows (typical)} & \textbf{Storage concern} \\
+\midrule
+user       & INT AUTO\_INCREMENT  & Few               & Negligible \\
+repository & INT AUTO\_INCREMENT  & One per DB        & Negligible \\
+commits    & CHAR(64) SHA-256     & One per commit    & Small \\
+snapshots  & BIGINT AUTO\_INCREMENT & tables $\times$ commits & Large (LONGTEXT blobs) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Entity Attribute Tables}
+
+\subsubsection{USER}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l p{5cm}}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+user\_id       & INT          & PK, AUTO\_INCREMENT  & Surrogate primary key \\
+username       & VARCHAR(50)  & UNIQUE, NOT NULL     & Unique login handle \\
+email          & VARCHAR(100) & UNIQUE, NOT NULL     & Unique email address \\
+password\_hash & VARCHAR(255) & NOT NULL             & bcrypt / argon2 hash \\
+full\_name     & VARCHAR(100) & NOT NULL             & Display name used in \texttt{gitdb log} \\
+is\_active     & BOOLEAN      & DEFAULT TRUE         & Soft-delete flag \\
+created\_at    & DATETIME     & DEFAULT CURRENT\_TIMESTAMP & Account creation timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{REPOSITORY}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l p{4.5cm}}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+repo\_id         & INT          & PK, AUTO\_INCREMENT       & Surrogate primary key \\
+user\_id         & INT          & FK $\to$ user, NOT NULL   & Owner of this repository \\
+repo\_name       & VARCHAR(100) & NOT NULL                  & Human-readable name \\
+target\_db\_name & VARCHAR(100) & NOT NULL                  & MySQL database being versioned \\
+db\_host         & VARCHAR(100) & NOT NULL                  & Server hostname or IP \\
+db\_port         & INT          & NOT NULL, DEFAULT 3306    & Server port \\
+db\_user         & VARCHAR(50)  & NOT NULL                  & MySQL login username \\
+db\_password\_key & VARCHAR(100) & NULL                      & OS keyring service key; password never stored here \\
+current\_hash    & CHAR(64)     & FK $\to$ commits, NULL    & HEAD pointer; NULL before first commit \\
+created\_at      & DATETIME     & DEFAULT CURRENT\_TIMESTAMP & Registration timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{tcolorbox}[infobox]
+\textbf{Note on \texttt{current\_hash}:} This column replaces a separate
+\texttt{head} table. It is updated on every successful \texttt{gitdb commit}
+and \texttt{gitdb checkout}. The MySQL connection password is \emph{never} stored
+in \texttt{gitdb\_meta} or \texttt{.gitdb/config.json} --- it is stored in the
+OS-level keyring (via the \texttt{keyring} library); only the keyring service key
+is persisted in \texttt{db\_password\_key}.
+\end{tcolorbox}
+
+\subsubsection{COMMITS}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l p{4.5cm}}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+hash         & CHAR(64)  & PK                              & SHA-256 content hash \\
+repo\_id     & INT       & FK $\to$ repository, NOT NULL   & Repository this commit belongs to \\
+parent\_hash & CHAR(64)  & FK $\to$ commits, NULL          & Parent commit; NULL for root commit \\
+author\_id   & INT       & FK $\to$ user, NOT NULL         & User who authored this commit \\
+message      & TEXT      & NOT NULL                        & Commit description \\
+created\_at  & DATETIME  & DEFAULT CURRENT\_TIMESTAMP     & Commit timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Linear chain constraint:} GitDB does not support branching. Therefore,
+\texttt{parent\_hash} is unique across the table --- no two commits share the
+same parent. The self-referencing foreign key is \texttt{NULL} only for the root
+commit (the very first commit in a repository). The hash is computed as:
+\[
+\texttt{hash} = \text{SHA-256}\bigl(\,\text{serialise}(\textit{schema},\,
+\textit{data}) \;\|\; \texttt{parent\_hash}\,\bigr)
+\]
+\end{tcolorbox}
+
+\subsubsection{SNAPSHOTS}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l p{4.5cm}}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+id           & BIGINT       & PK, AUTO\_INCREMENT             & Surrogate primary key \\
+commit\_hash & CHAR(64)     & FK $\to$ commits, NOT NULL      & Commit this snapshot belongs to \\
+table\_name  & VARCHAR(255) & NOT NULL                        & Name of the MySQL table snapshotted \\
+ddl\_json    & LONGTEXT     & NOT NULL                        & Serialised DDL (schema) as JSON \\
+rows\_json   & LONGTEXT     & NOT NULL                        & Serialised table rows as JSON array \\
+row\_count   & INT          & NOT NULL                        & Row count at snapshot time \\
+captured\_at & DATETIME     & DEFAULT CURRENT\_TIMESTAMP     & Snapshot capture timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A \texttt{UNIQUE} constraint on \texttt{(commit\_hash, table\_name)} ensures no
+duplicate snapshot exists for the same table within the same commit. A hard limit
+of \textbf{10,000 rows per table} is enforced at commit time.
+
+\subsection{Relationship Table}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{l l l l p{4.5cm}}
+\toprule
+\textbf{From} & \textbf{To} & \textbf{Name} & \textbf{Cardinality} & \textbf{Description} \\
+\midrule
+user       & repository & \textit{owns}      & 1:N      & One user owns many repositories \\
+user       & commits    & \textit{authors}   & 1:N      & One user authors many commits \\
+repository & commits    & \textit{contains}  & 1:N      & One repository contains many commits \\
+commits    & commits    & \textit{child of}  & 1:0..1   & Linear chain; each commit has at most one parent and at most one child \\
+commits    & snapshots  & \textit{has}       & 1:N      & One commit has one snapshot per tracked table \\
+repository & commits    & \textit{points to} & 1:1      & \texttt{current\_hash} is the HEAD pointer \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── Section 5: Feasibility ────────────────────────────────────────────────────
+\section{Feasibility and Design Constraints}
+
+\subsection{MySQL-Only Target}
+
+GitDB is scoped exclusively to MySQL. This focus enables deeper MySQL-specific
+optimisations and avoids the complexity of multi-database abstraction layers. The
+driver used is \texttt{mysql-connector-python}, with connection parameters (host,
+port, user, password, database) supplied at \texttt{gitdb init} time and stored
+in a local \texttt{.gitdb/config.json}.
+
+\subsection{Handling MySQL DDL Auto-Commit}
+
+This is the primary engineering challenge that differentiates GitDB-for-MySQL
+from a generic database versioning tool. The solution is the two-phase checkout
+described in Section~2.5. The key insight is: since the rollback target is always
+a previously committed, known-good snapshot stored in \texttt{gitdb\_meta}, DDL
+auto-commit only means we must re-apply the old schema from the snapshot rather
+than relying on \texttt{ROLLBACK} --- the end result is identical.
+
+\subsection{Handling Known Hard Problems}
+
+\subsubsection{Foreign Key Constraint Ordering}
+MySQL enforces foreign key constraints during DML operations. GitDB disables
+constraint checks for the duration of the data patch phase and re-enables them
+after:
+
+\begin{tcolorbox}[commandbox, title=Foreign Key Handling (MySQL)]
+\begin{lstlisting}[language=SQL]
+SET FOREIGN_KEY_CHECKS = 0;
+-- ... apply all INSERT / UPDATE / DELETE statements ...
+SET FOREIGN_KEY_CHECKS = 1;
+\end{lstlisting}
+\end{tcolorbox}
+
+Since the target state is always a known-good snapshot, re-enabling checks after
+the patch guarantees referential integrity of the final state.
+
+\subsubsection{Column Type Changes and Table Renames}
+Rather than attempting to infer developer intent in ambiguous cases, GitDB
+explicitly flags these as unsupported operations with clear diagnostic messages.
+This mirrors the design philosophy of production-grade tools such as Prisma and
+Atlas, which prioritise correctness over automatic handling of ambiguous
+transformations.
+
+\subsection{Data Scale Constraints}
+
+A row limit of \textbf{10,000 rows per table} is enforced at commit time. This
+keeps snapshot sizes in \texttt{gitdb\_meta} manageable and ensures in-memory
+diffing completes within practical time bounds for a mini-project scope.
+
+\subsection{Correctness by Construction}
+
+Within documented constraints, GitDB's diff engine is correct by construction:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Produces deterministic, reproducible SQL from algorithmic
+    transformation of two known snapshots
+    \item No reliance on external APIs or non-deterministic heuristics
+    \item All transformations are pure functions of input snapshots stored in
+    \texttt{gitdb\_meta}
+    \item Two-phase checkout guarantees the database returns to a consistent
+    state on any failure
+\end{itemize}
+
+% ── Section 6: Technology Stack ───────────────────────────────────────────────
+\section{Technology Stack}
+
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.2cm} >{\ttfamily}p{3.8cm} X}
+\rowcolor{tableheader}
+\textcolor{white}{\normalfont\bfseries Domain} &
+\textcolor{white}{\normalfont\bfseries Technology} &
+\textcolor{white}{\normalfont\bfseries Purpose} \\
+\midrule
+Core Engine       & Python 3.10+           & Snapshot generation, diff engine, and MySQL interaction \\
+\rowcolor{lightgray}
+Database Driver   & mysql-connector-python & Native MySQL connectivity for both target DB and gitdb\_meta \\
+Schema Parsing    & sqlglot                & AST-level schema diff engine for DDL parsing \\
+\rowcolor{lightgray}
+Hashing           & hashlib (SHA-256)      & Merkle hash chain for commit identification \\
+CLI Framework     & click, rich            & Git-style subcommands and coloured terminal output \\
+\rowcolor{lightgray}
+Backend API       & Flask                  & Lightweight REST API exposing engine operations over HTTP \\
+Frontend UI       & React 18               & Component-based visual interface \\
+\rowcolor{lightgray}
+Styling           & Tailwind CSS           & Utility-first CSS framework \\
+Commit History    & react-flow             & Renders the linear commit history visually \\
+\rowcolor{lightgray}
+Diff Viewer       & @git-diff-view/react   & Side-by-side schema and data comparison (React~18 compatible) \\
+Serialisation     & JSON (Python stdlib)   & Schema and row data storage in gitdb\_meta.snapshots \\
+\end{tabularx}
+
+\begin{tcolorbox}[infobox]
+\textbf{Note on \texttt{react-flow}:} The original design described the commit
+graph as a Directed Acyclic Graph (DAG). Since GitDB supports only a linear
+commit history with no branching or merging, \texttt{react-flow} is used to
+render a simple linear chain of commit nodes rather than a full DAG.
+\end{tcolorbox}
+
+% ── Section 7: CLI Reference ──────────────────────────────────────────────────
+\section{CLI Commands Reference}
+
+The command-line interface closely follows Git conventions for immediate
+familiarity.
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb register}]
+\begin{lstlisting}
+gitdb register
+\end{lstlisting}
+\textcolor{codetext}{\small Creates a user in \texttt{gitdb\_meta.user}
+with an argon2-hashed password via interactive prompts. No plaintext password
+is passed as a CLI argument.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb init}]
+\begin{lstlisting}
+gitdb init --host localhost --port 3306 \
+           --user root --password secret \
+           --database myapp_db \
+           --repo-name myapp --author username
+\end{lstlisting}
+\textcolor{codetext}{\small Connects to the specified MySQL server, creates the
+\texttt{gitdb\_meta} database and its four tables (\texttt{user},
+\texttt{repository}, \texttt{commits}, \texttt{snapshots}) if they do not already
+exist, registers the target database as a new repository, writes connection
+config to \texttt{.gitdb/config.json}, and stores DB credentials using the
+OS keyring service.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb commit}]
+\begin{lstlisting}
+gitdb commit -m "<message>" --author USERNAME
+\end{lstlisting}
+\textcolor{codetext}{\small Introspects the target MySQL database via
+\texttt{information\_schema} and \texttt{SHOW CREATE TABLE}, serialises the full
+schema and data as JSON, computes the SHA-256 Merkle hash, and writes the commit
+and snapshot records to \texttt{gitdb\_meta}. Updates \texttt{repository.current\_hash}
+to the new commit. Resolves \texttt{--author} to an active user in
+\texttt{gitdb\_meta.user}. Enforces the 10,000-row limit per table.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb log}]
+\begin{lstlisting}
+gitdb log [--oneline] [--graph]
+\end{lstlisting}
+\textcolor{codetext}{\small Queries \texttt{gitdb\_meta.commits} and displays the
+commit history in reverse chronological order by walking the \texttt{parent\_hash}
+chain from \texttt{repository.current\_hash}. \texttt{--oneline} shows a compact
+format; \texttt{--graph} renders an ASCII linear chain.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb diff}]
+\begin{lstlisting}
+gitdb diff <hash1> <hash2> [--schema-only] [--data-only]
+\end{lstlisting}
+\textcolor{codetext}{\small Reads both snapshots from \texttt{gitdb\_meta.snapshots},
+runs the diff engine, and outputs the MySQL SQL statements (\texttt{ALTER TABLE},
+\texttt{CREATE TABLE}, \texttt{DROP TABLE}, \texttt{INSERT}, \texttt{UPDATE},
+\texttt{DELETE}) required to transition from \texttt{hash1} to \texttt{hash2}.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb checkout}]
+\begin{lstlisting}
+gitdb checkout <commit_hash>
+\end{lstlisting}
+\textcolor{codetext}{\small Executes a two-phase checkout against the target MySQL
+database. Phase~1 applies all DDL changes; on failure, the prior schema is
+restored from \texttt{gitdb\_meta}. Phase~2 applies all data changes inside an
+explicit transaction with \texttt{SET FOREIGN\_KEY\_CHECKS = 0}; on failure, the
+transaction is rolled back. On success, updates
+\texttt{repository.current\_hash} to the checked-out commit hash.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb status}]
+\begin{lstlisting}
+gitdb status
+\end{lstlisting}
+\textcolor{codetext}{\small Compares the live MySQL database state against the
+HEAD snapshot referenced by \texttt{repository.current\_hash} and reports
+uncommitted changes: added/dropped tables, modified columns, and row count
+differences per table.}
+\end{tcolorbox}
+
+% ── Section 8: Web UI Architecture ───────────────────────────────────────────
+\section{Web UI Architecture}
+
+The React-based web interface provides visual tooling for exploring and managing
+MySQL database versions.
+
+\subsection{Commit History Visualisation}
+
+Built with \texttt{react-flow}, the commit history is rendered as a linear
+chain of nodes. Each node shows the commit hash, message, author
+(\texttt{user.full\_name}), and timestamp. The current HEAD --- identified via
+\texttt{repository.current\_hash} --- is visually highlighted.
+
+\subsection{Schema and Data Diff Viewer}
+
+Powered by \texttt{@git-diff-view/react}, the interface displays side-by-side
+comparisons of DDL and row-level data changes between any two commits, with
+syntax highlighting and a SQL patch preview before checkout.
+
+\subsection{Schema Table Browser}
+
+Provides a read-only view of the MySQL database schema at any commit, showing
+table structure, column types, constraints, primary keys, and foreign keys as
+recorded in \texttt{gitdb\_meta.snapshots}.
+
+\subsection{Flask REST API}
+
+The backend exposes GitDB engine operations over HTTP:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \texttt{GET /commits} --- List all commits for the current repository
+    from \texttt{gitdb\_meta}
+    \item \texttt{POST /commit} --- Create new commit, write snapshot, update
+    \texttt{repository.current\_hash}
+    \item \texttt{GET /diff/:hash1/:hash2} --- Compute and return the SQL diff
+    \item \texttt{POST /checkout/:hash} --- Execute two-phase checkout against
+    MySQL; update \texttt{repository.current\_hash} on success
+    \item \texttt{GET /status} --- Report uncommitted changes vs HEAD snapshot
+\end{itemize}
+
+% ── Section 9: Academic Contributions ────────────────────────────────────────
+\section{Academic Contributions and Learning Outcomes}
+
+GitDB serves as a comprehensive applied demonstration of core DBMS concepts, all
+exercised against MySQL specifically.
+
+\subsection{MySQL Schema Introspection}
+
+Implementation of programmatic schema access via \texttt{information\_schema.TABLES},
+\texttt{information\_schema.COLUMNS}, \texttt{information\_schema.KEY\_COLUMN\_USAGE},
+and \texttt{SHOW CREATE TABLE} demonstrates how a production RDBMS exposes its
+own metadata and the structure of system catalogues.
+
+\subsection{ACID Properties and MySQL DDL Constraints}
+
+The two-phase checkout directly illustrates the ACID properties and their limits
+in MySQL:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{Atomicity:} Data patch phase is all-or-nothing via explicit
+    transaction
+    \item \textbf{Consistency:} Referential integrity guaranteed through
+    \texttt{FOREIGN\_KEY\_CHECKS} discipline
+    \item \textbf{Isolation:} Transaction-level separation during data restore
+    \item \textbf{Durability:} Committed state is permanent;
+    \texttt{repository.current\_hash} reflects actual DB state
+    \item \textbf{DDL Auto-Commit:} Demonstrates a real and practically
+    important MySQL limitation and how to engineer around it
+\end{itemize}
+
+\subsection{Structural Schema Comparison}
+
+The AST-level diff engine exercises concepts that appear in ORM migration
+generation (Alembic, Django migrations), database CI/CD validation pipelines,
+and schema synchronisation tools --- all of which are core to modern database
+DevOps practice.
+
+\subsection{Cryptographic Integrity Verification}
+
+The SHA-256 Merkle hash chain demonstrates the application of cryptographic
+hashing to build tamper-evident audit logs, a concept that generalises to
+blockchain, distributed ledgers, and data integrity verification in enterprise
+systems.
+
+\subsection{Primary Key as Stable Row Identifier}
+
+The primary-key-anchored data diff reinforces the foundational role of primary
+keys in relational databases and illustrates the practical consequences of key
+selection: tables without primary keys cannot be diffed and are flagged at
+commit time with a clear diagnostic.
+
+\subsection{Relational Design of the Versioning Layer}
+
+The \texttt{gitdb\_meta} schema itself --- with its self-referential
+\texttt{commits} table (parent hash foreign key), the normalised
+\texttt{snapshots} table, the \texttt{user} table for authorship, and the
+\texttt{current\_hash} HEAD pointer embedded in \texttt{repository} --- is a
+teaching artefact in relational data modelling. It demonstrates how a linked-list
+history structure, multi-user ownership, and a HEAD pointer can all be represented
+cleanly in a four-table relational schema without redundancy.
+
+% ── Section 10: Conclusion ────────────────────────────────────────────────────
+\section{Conclusion}
+
+GitDB represents a focused, well-scoped solution to a real and recognised problem
+in MySQL database development: the absence of intuitive, Git-like version control
+for database state. By adopting a state-based approach with a dedicated
+\texttt{gitdb\_meta} metadata database, automatic diff generation, and a
+two-phase checkout strategy that correctly handles MySQL's DDL auto-commit
+behaviour, it provides MySQL developers with a familiar version control workflow
+for managing both schema and data evolution.
+
+The project's scope reflects deliberate engineering decisions:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{MySQL-only target} --- enables MySQL-specific optimisations
+    and avoids multi-DB abstraction complexity
+    \item \textbf{Four-entity \texttt{gitdb\_meta} schema} --- \texttt{user},
+    \texttt{repository}, \texttt{commits}, \texttt{snapshots}; HEAD pointer
+    embedded in \texttt{repository.current\_hash}
+    \item \textbf{Two-phase checkout} --- principled handling of MySQL DDL
+    auto-commit without pretending it does not exist
+    \item \textbf{Linear commit history} --- no branching or merging, keeping
+    scope tractable; history is a linked list not a DAG
+    \item \textbf{10,000-row limit per table} --- documented constraint
+    appropriate to mini-project scale
+    \item \textbf{Column type changes and renames flagged, not silently handled}
+    --- correctness over convenience, consistent with Prisma and Atlas
+    \item \textbf{User entity for authorship and authentication} --- commits
+    carry \texttt{author\_id} FK; \texttt{full\_name} used in log output
+\end{itemize}
+
+From an academic perspective, GitDB demonstrates substantive breadth across core
+DBMS concepts --- MySQL schema introspection, ACID transaction properties, DDL
+auto-commit constraints, structural AST-level diffing, cryptographic Merkle
+hashing, and relational data modelling of the versioning layer itself --- while
+providing each team member with ownership of a well-defined, independently
+testable subsystem.
+
+The result is a working system that brings Git's proven version control paradigm
+to the MySQL layer, implemented with established algorithms, mature libraries,
+and principled handling of MySQL's real-world constraints.
+
+\end{document}

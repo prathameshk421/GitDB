@@ -1,0 +1,419 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{multirow}
+
+\definecolor{sectioncolor}{RGB}{30, 80, 150}
+\definecolor{codebg}{RGB}{245, 245, 245}
+\definecolor{codekw}{RGB}{0, 0, 180}
+\definecolor{codecomment}{RGB}{80, 120, 80}
+\definecolor{codestring}{RGB}{160, 30, 30}
+
+\titleformat{\section}{\large\bfseries\color{sectioncolor}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{sectioncolor}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{}{0em}{}
+
+\lstdefinestyle{sqlstyle}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{codekw}\bfseries,
+    commentstyle=\color{codecomment},
+    stringstyle=\color{codestring},
+    breaklines=true,
+    frame=single,
+    framerule=0.4pt,
+    rulecolor=\color{gray!50},
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    morekeywords={CREATE, TABLE, PRIMARY, KEY, FOREIGN, REFERENCES, NOT, NULL,
+                  DEFAULT, AUTO\_INCREMENT, UNIQUE, CHAR, VARCHAR, INT, BIGINT,
+                  BOOLEAN, DATETIME, TEXT, LONGTEXT, CURRENT\_TIMESTAMP,
+                  CONSTRAINT, INDEX, ON, DELETE, CASCADE, TRUE}
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=sectioncolor,
+    urlcolor=sectioncolor
+}
+
+\newcommand{\pk}{\textbf{\textcolor{sectioncolor}{PK}}}
+\newcommand{\fk}{\textbf{\textcolor{red!70!black}{FK}}}
+\newcommand{\uk}{\textbf{\textcolor{green!50!black}{UK}}}
+
+\title{
+    \textbf{GitDB: Database Structure Documentation} \\[0.4em]
+    \large Schema Design, Entity Descriptions, and Relationships \\[0.4em]
+    \normalsize DISL Mini Project --- SY-11, Lab Batch F-11 \\
+    Pune Institute of Computer Technology (PICT), Pune
+}
+
+\author{
+    Aditya Malode (23325) \and
+    Rohan Natekar (23330) \and
+    Aarush Oak (23332) \and
+    Prathamesh Kinagi (23340)
+}
+
+\date{Academic Year 2025--26}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────
+\section{Overview}
+
+GitDB uses a dedicated MySQL database named \texttt{gitdb\_meta} to store all
+versioning metadata. This design mirrors Git's \texttt{.git/} directory --- the
+versioning layer is fully isolated from the target database being versioned,
+ensuring zero pollution of user data.
+
+The \texttt{gitdb\_meta} database consists of \textbf{four entities}:
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l l}
+\toprule
+\textbf{Entity} & \textbf{Purpose} \\
+\midrule
+USER       & Stores user accounts and authentication credentials \\
+REPOSITORY & Tracks each MySQL database registered for versioning \\
+COMMITS    & Stores commit history forming a linear Merkle chain \\
+SNAPSHOTS  & Stores full schema and data snapshots per table per commit \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent The \texttt{HEAD} pointer --- which tracks the current commit for each
+repository --- is stored directly as the \texttt{current\_hash} column inside
+the \texttt{REPOSITORY} table, keeping the design normalised to four entities
+rather than five.
+
+% ─────────────────────────────────────────────
+\section{Entity Descriptions}
+
+% ── USER ──────────────────────────────────────
+\subsection{USER}
+
+The \texttt{USER} entity represents individuals who interact with GitDB. Each
+user can own multiple repositories and is recorded as the author of every commit
+they make. Authentication is handled via a stored password hash; plaintext
+passwords are never persisted.
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l l}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+user\_id       & INT           & \pk, AUTO\_INCREMENT  & Surrogate primary key \\
+username       & VARCHAR(50)   & \uk, NOT NULL         & Unique login handle \\
+email          & VARCHAR(100)  & \uk, NOT NULL         & Unique email address \\
+password\_hash & VARCHAR(255)  & NOT NULL              & bcrypt/argon2 hash \\
+full\_name     & VARCHAR(100)  & NOT NULL              & Display name for commit attribution \\
+is\_active     & BOOLEAN       & DEFAULT TRUE          & Soft-delete flag \\
+created\_at    & DATETIME      & DEFAULT CURRENT\_TIMESTAMP & Account creation timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection*{Design Notes}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{username} and \texttt{email} both carry unique constraints to
+    prevent duplicate registrations via either identifier.
+    \item \texttt{is\_active} enables soft deletion --- deactivated users retain
+    their commit history without orphaning records.
+    \item \texttt{full\_name} is used for commit attribution in \texttt{gitdb log}
+    output, analogous to \texttt{git config user.name}.
+\end{itemize}
+
+% ── REPOSITORY ────────────────────────────────
+\subsection{REPOSITORY}
+
+The \texttt{REPOSITORY} entity records each MySQL database that has been
+registered with GitDB via \texttt{gitdb init}. It stores the connection
+parameters needed to reach the target database, as well as a pointer
+(\texttt{current\_hash}) to the commit that HEAD currently refers to.
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l l}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+repo\_id        & INT          & \pk, AUTO\_INCREMENT      & Surrogate primary key \\
+user\_id        & INT          & \fk\ $\to$ USER, NOT NULL & Owner of this repository \\
+repo\_name      & VARCHAR(100) & NOT NULL                  & Human-readable repository name \\
+target\_db\_name & VARCHAR(100)& NOT NULL                  & MySQL database being versioned \\
+db\_host        & VARCHAR(100) & NOT NULL                  & MySQL server hostname or IP \\
+db\_port        & INT          & NOT NULL                  & MySQL server port (default 3306) \\
+db\_user        & VARCHAR(50)  & NOT NULL                  & MySQL login username \\
+db\_password\_key & VARCHAR(100) & NULL                    & OS keyring service key; password never stored in DB \\
+current\_hash   & CHAR(64)     & \fk\ $\to$ COMMITS, NULL  & HEAD pointer (NULL before first commit) \\
+created\_at     & DATETIME     & DEFAULT CURRENT\_TIMESTAMP & Repository registration timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection*{Design Notes}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{current\_hash} serves as the HEAD pointer, eliminating the
+    need for a separate \texttt{HEAD} table. It is \texttt{NULL} for a freshly
+    initialised repository with no commits yet.
+    \item The MySQL connection password is \emph{never} stored in \texttt{gitdb\_meta}
+    or \texttt{.gitdb/config.json}. Instead, the password is stored in the OS-level
+    keyring (via the \texttt{keyring} library) and only the keyring service key
+    (e.g.\ \texttt{gitdb:repo\_1}) is persisted in \texttt{db\_password\_key}.
+    \item \texttt{current\_hash} is updated on every successful
+    \texttt{gitdb commit} and \texttt{gitdb checkout} operation.
+\end{itemize}
+
+% ── COMMITS ───────────────────────────────────
+\subsection{COMMITS}
+
+The \texttt{COMMITS} entity stores the versioning history of a repository. Each
+row represents one commit. Commits are linked via \texttt{parent\_hash} to form
+a \textbf{linear Merkle chain} --- since GitDB does not support branching,
+each commit has at most one parent and at most one child, making the history
+a simple linked list.
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l l}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+hash         & CHAR(64)     & \pk                           & SHA-256 content hash \\
+repo\_id     & INT          & \fk\ $\to$ REPOSITORY, NOT NULL & Repository this commit belongs to \\
+parent\_hash & CHAR(64)     & \fk\ $\to$ COMMITS, \uk, NULL & Hash of parent commit (NULL for first); UNIQUE enforces linear chain \\
+author\_id   & INT          & \fk\ $\to$ USER, NOT NULL     & User who made this commit \\
+message      & TEXT         & NOT NULL                      & Commit description message \\
+created\_at  & DATETIME     & DEFAULT CURRENT\_TIMESTAMP   & Commit creation timestamp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection*{Merkle Hash Construction}
+
+The \texttt{hash} is not a random UUID --- it is a deterministic cryptographic
+fingerprint computed as:
+
+\[
+\texttt{hash} = \text{SHA-256}\bigl(\,\text{serialise}(\textit{schema},\,
+\textit{data})\;\|\;\texttt{parent\_hash}\,\bigr)
+\]
+
+This means any modification to a historical snapshot immediately invalidates
+all subsequent commit hashes, making unauthorised history rewriting detectable.
+
+\subsubsection*{Design Notes}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{parent\_hash} is \texttt{NULL} only for the very first commit
+    in a repository (the root commit), analogous to Git's initial commit.
+    \item Because there is no branching, \texttt{parent\_hash} is unique across
+    the table --- no two commits share the same parent. This is now enforced
+    at the DDL level via \texttt{UNIQUE KEY uq\_parent\_hash (parent\_hash)},
+    guaranteeing the linear chain constraint at the database layer.
+    \item The self-referencing foreign key on \texttt{parent\_hash} enforces
+    referential integrity of the chain at the database level.
+\end{itemize}
+
+% ── SNAPSHOTS ─────────────────────────────────
+\subsection{SNAPSHOTS}
+
+The \texttt{SNAPSHOTS} entity is the largest and most storage-intensive table in
+\texttt{gitdb\_meta}. It stores the \textit{complete state} of every tracked
+table at the time of each commit --- both the schema (DDL) and the data (rows)
+--- as JSON blobs. This is what enables GitDB's state-based approach: rather than
+storing migration instructions, it stores the actual state.
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l l l}
+\toprule
+\textbf{Attribute} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+id           & BIGINT       & \pk, AUTO\_INCREMENT          & Surrogate primary key \\
+commit\_hash & CHAR(64)     & \fk\ $\to$ COMMITS, NOT NULL  & Commit this snapshot belongs to \\
+table\_name  & VARCHAR(255) & NOT NULL                      & Name of the MySQL table snapshotted \\
+ddl\_json    & LONGTEXT     & NOT NULL                      & Serialised DDL (schema) as JSON \\
+rows\_json   & LONGTEXT     & NOT NULL                      & Serialised table rows as JSON array \\
+row\_count   & INT          & NOT NULL                      & Number of rows at snapshot time \\
+captured\_at & DATETIME     & DEFAULT CURRENT\_TIMESTAMP   & Timestamp of snapshot capture \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection*{JSON Storage Format}
+
+\textbf{\texttt{ddl\_json}} stores column metadata extracted from
+\texttt{information\_schema.COLUMNS}:
+\begin{lstlisting}[style=sqlstyle, caption={Example ddl\_json structure}]
+{
+  "table_name": "orders",
+  "columns": [
+    { "name": "order_id",   "type": "INT",          "nullable": false,
+      "key": "PRI", "default": null,  "extra": "auto_increment" },
+    { "name": "customer_id","type": "INT",          "nullable": false,
+      "key": "MUL", "default": null,  "extra": "" },
+    { "name": "total",      "type": "DECIMAL(10,2)","nullable": false,
+      "key": "",    "default": "0.00","extra": "" }
+  ]
+}
+\end{lstlisting}
+
+\textbf{\texttt{rows\_json}} stores a JSON array of all rows, ordered by primary
+key for deterministic hashing:
+\begin{lstlisting}[style=sqlstyle, caption={Example rows\_json structure}]
+[
+  { "order_id": 1, "customer_id": 42, "total": "149.99" },
+  { "order_id": 2, "customer_id": 17, "total":  "89.50" }
+]
+\end{lstlisting}
+
+\subsubsection*{Design Notes}
+\begin{itemize}[leftmargin=1.5em]
+    \item A \texttt{UNIQUE} constraint on \texttt{(commit\_hash, table\_name)}
+    ensures no duplicate snapshot exists for the same table in the same commit.
+    \item \texttt{LONGTEXT} is used instead of \texttt{JSON} type to maximise
+    compatibility and avoid MySQL JSON indexing overhead for blobs that are only
+    read and written atomically.
+    \item A hard limit of \textbf{10,000 rows per table} is enforced at commit
+    time to keep snapshot sizes and in-memory diffing within practical bounds.
+    \item Tables without a primary key cannot be diffed and are flagged at
+    commit time with a diagnostic message.
+\end{itemize}
+
+% ─────────────────────────────────────────────
+\section{Relationships}
+
+\begin{center}
+\begin{tabular}{l l l p{6.5cm}}
+\toprule
+\textbf{From} & \textbf{To} & \textbf{Name} & \textbf{Cardinality \& Description} \\
+\midrule
+USER       & REPOSITORY & \textit{owns}      & 1:N --- One user owns many repositories; each repository has exactly one owner \\[4pt]
+USER       & COMMITS    & \textit{authors}   & 1:N --- One user authors many commits; each commit has exactly one author \\[4pt]
+REPOSITORY & COMMITS    & \textit{contains}  & 1:N --- One repository contains many commits; each commit belongs to exactly one repository \\[4pt]
+COMMITS    & COMMITS    & \textit{child of}  & 1:0..1 (self) --- Each commit optionally has one parent and optionally has one child; no branching means the chain is strictly linear \\[4pt]
+COMMITS    & SNAPSHOTS  & \textit{has}       & 1:N --- One commit has many snapshots (one per tracked table); each snapshot belongs to exactly one commit \\[4pt]
+REPOSITORY & COMMITS    & \textit{points to} & 1:1 via \texttt{current\_hash} --- Each repository's HEAD points to exactly one commit (NULL before the first commit) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ─────────────────────────────────────────────
+\section{Complete DDL}
+
+The following SQL creates the complete \texttt{gitdb\_meta} schema including
+all constraints.
+
+\begin{lstlisting}[style=sqlstyle, caption={gitdb\_meta complete DDL}]
+CREATE DATABASE IF NOT EXISTS gitdb_meta;
+USE gitdb_meta;
+
+-- Users
+CREATE TABLE user (
+    user_id       INT           NOT NULL AUTO_INCREMENT,
+    username      VARCHAR(50)   NOT NULL,
+    email         VARCHAR(100)  NOT NULL,
+    password_hash VARCHAR(255)  NOT NULL,
+    full_name     VARCHAR(100)  NOT NULL,
+    is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
+    created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    UNIQUE KEY uq_username (username),
+    UNIQUE KEY uq_email    (email)
+);
+
+-- Repositories
+CREATE TABLE repository (
+    repo_id          INT           NOT NULL AUTO_INCREMENT,
+    user_id          INT           NOT NULL,
+    repo_name        VARCHAR(100)  NOT NULL,
+    target_db_name   VARCHAR(100)  NOT NULL,
+    db_host          VARCHAR(100)  NOT NULL,
+    db_port          INT           NOT NULL DEFAULT 3306,
+    db_user          VARCHAR(50)   NOT NULL,
+    db_password_key  VARCHAR(100)  NULL,     -- keyring key, not the password
+    current_hash     CHAR(64)      NULL,
+    created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (repo_id),
+    CONSTRAINT fk_repo_user
+        FOREIGN KEY (user_id) REFERENCES user (user_id)
+);
+
+-- Commits (Merkle chain)
+CREATE TABLE commits (
+    hash         CHAR(64)      NOT NULL,
+    repo_id      INT           NOT NULL,
+    parent_hash  CHAR(64)      NULL,
+    author_id    INT           NOT NULL,
+    message      TEXT          NOT NULL,
+    created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (hash),
+    UNIQUE KEY uq_parent_hash (parent_hash),   -- enforces linear chain at DB level
+    CONSTRAINT fk_commit_repo
+        FOREIGN KEY (repo_id)     REFERENCES repository (repo_id),
+    CONSTRAINT fk_commit_parent
+        FOREIGN KEY (parent_hash) REFERENCES commits    (hash),
+    CONSTRAINT fk_commit_author
+        FOREIGN KEY (author_id)   REFERENCES user       (user_id)
+);
+
+-- Add HEAD FK on repository after commits table exists
+ALTER TABLE repository
+    ADD CONSTRAINT fk_repo_head
+        FOREIGN KEY (current_hash) REFERENCES commits (hash);
+
+-- Snapshots
+CREATE TABLE snapshots (
+    id           BIGINT        NOT NULL AUTO_INCREMENT,
+    commit_hash  CHAR(64)      NOT NULL,
+    table_name   VARCHAR(255)  NOT NULL,
+    ddl_json     LONGTEXT      NOT NULL,
+    rows_json    LONGTEXT      NOT NULL,
+    row_count    INT           NOT NULL,
+    captured_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_commit_table (commit_hash, table_name),
+    CONSTRAINT fk_snap_commit
+        FOREIGN KEY (commit_hash) REFERENCES commits (hash)
+);
+\end{lstlisting}
+
+% ─────────────────────────────────────────────
+\section{Storage and Scale Considerations}
+
+\begin{center}
+\begin{tabular}{l l p{8cm}}
+\toprule
+\textbf{Constraint} & \textbf{Value} & \textbf{Rationale} \\
+\midrule
+Max rows per table  & 10,000   & Keeps \texttt{rows\_json} blobs under $\sim$5\,MB; ensures in-memory diff completes in practical time \\
+Snapshot storage    & LONGTEXT & Supports up to 4\,GB per cell; sufficient for all mini-project workloads \\
+Hash length         & CHAR(64) & Fixed-length SHA-256 hex digest; no variable-length overhead \\
+Snapshot uniqueness & UNIQUE (commit\_hash, table\_name) & Prevents duplicate snapshots for the same table in the same commit \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent For production use beyond mini-project scope, \texttt{rows\_json}
+could be compressed (e.g.\ \texttt{ZLIB} via application layer) or replaced
+with a dedicated object store, with only a content-addressed reference stored
+in \texttt{gitdb\_meta}.
+
+\end{document}
+\end{antml:parameter>

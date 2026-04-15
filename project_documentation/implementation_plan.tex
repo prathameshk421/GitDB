@@ -1,0 +1,926 @@
+\documentclass[12pt, a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{setspace}
+\usepackage{amsmath}
+\tcbuselibrary{skins, breakable}
+
+% ── Colors ────────────────────────────────────────────────────────────────────
+\definecolor{primaryblue}{HTML}{1A73E8}
+\definecolor{darkblue}{HTML}{0D47A1}
+\definecolor{lightgray}{HTML}{F5F5F5}
+\definecolor{codebg}{HTML}{1E1E2E}
+\definecolor{codetext}{HTML}{CDD6F4}
+\definecolor{accent}{HTML}{E53935}
+\definecolor{mysqlorange}{HTML}{E8710A}
+\definecolor{tableheader}{HTML}{1A73E8}
+\definecolor{successgreen}{HTML}{1B8A3E}
+\definecolor{lightgreen}{HTML}{F0FFF4}
+
+% ── Hyperref Setup ────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    pdftitle={GitDB: Implementation Plan},
+    pdfauthor={Group Project - DBMS}
+}
+
+% ── Section Formatting ────────────────────────────────────────────────────────
+\titleformat{\section}
+  {\large\bfseries\color{darkblue}}
+  {\thesection.}{0.5em}{}[\color{primaryblue}\titlerule]
+
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{primaryblue}}
+  {\thesubsection.}{0.5em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{primaryblue!80}}
+  {\thesubsubsection.}{0.5em}{}
+
+\titlespacing*{\section}{0pt}{1.2em}{0.6em}
+\titlespacing*{\subsection}{0pt}{0.8em}{0.4em}
+\titlespacing*{\subsubsection}{0pt}{0.6em}{0.3em}
+
+% ── Code Listing Style ────────────────────────────────────────────────────────
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{codetext},
+    keywordstyle=\color{cyan}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{yellow},
+    breaklines=true,
+    frame=none,
+    xleftmargin=1em,
+    xrightmargin=1em,
+    aboveskip=0.5em,
+    belowskip=0.5em,
+    showstringspaces=false,
+    numbers=none,
+}
+
+% ── Custom Boxes ──────────────────────────────────────────────────────────────
+\tcbset{
+    commandbox/.style={
+        colback=codebg,
+        colframe=primaryblue,
+        coltext=codetext,
+        fonttitle=\bfseries\color{white},
+        attach boxed title to top left={yshift=-2mm, xshift=4mm},
+        boxed title style={colback=primaryblue, colframe=primaryblue},
+        arc=4pt,
+        boxrule=0.8pt,
+        left=6pt, right=6pt, top=8pt, bottom=6pt,
+        breakable
+    },
+    infobox/.style={
+        colback=lightgray,
+        colframe=primaryblue,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    },
+    warningbox/.style={
+        colback=mysqlorange!8,
+        colframe=mysqlorange,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    },
+    fixbox/.style={
+        colback=lightgreen,
+        colframe=successgreen,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    }
+}
+
+% ── Header / Footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{\textbf{GitDB}} --- Implementation Plan}
+\fancyhead[R]{\small\textcolor{gray}{DBMS Mini Project}}
+\fancyfoot[C]{\small\textcolor{gray}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{primaryblue}\leaders\hrule height \headrulewidth\hfill}}
+
+% ── Document ──────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+
+    {\Huge\bfseries\color{darkblue} GitDB}\\[0.4em]
+    {\Large\color{primaryblue} Implementation Plan}\\[0.2em]
+    {\small\color{mysqlorange}\textit{Detailed Phase-by-Phase Build Guide}}\\[0.2em]
+    {\small\color{gray}\rule{8cm}{0.5pt}}
+
+    \vspace{1.5cm}
+
+    \begin{tcolorbox}[infobox, width=0.85\textwidth]
+        \centering
+        {\normalsize\textit{A complete implementation roadmap for GitDB --- covering repo
+        scaffold, database setup, snapshot engine, diff engine, two-phase checkout,
+        CLI, REST API, and React UI --- with all spec issues identified and fixed.}}
+    \end{tcolorbox}
+
+    \vspace{1.5cm}
+
+    {\large\textbf{Institution:} PICT, Pune}\\[0.5em]
+    {\large\textbf{Subject:} DISL}\\[0.5em]
+    {\large\textbf{Project Type:} Mini Project}\\[0.5em]
+    {\large\textbf{Class:} SY-11 \quad|\quad \textbf{Lab Batch:} F-11}\\[0.5em]
+    {\large\textbf{Group Size:} 4 Members}\\[1em]
+
+    \vspace{0.5cm}
+
+    \textbf{Team Members:}\\
+    \vspace{0.5em}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{>{\centering\arraybackslash}p{1cm} >{\arraybackslash}p{5cm} >{\centering\arraybackslash}p{2.5cm}}
+    \toprule
+    \textbf{Sr.} & \textbf{Name} & \textbf{Roll No.} \\
+    \midrule
+    1 & Aditya Malode     & 23325 \\
+    2 & Rohan Natekar     & 23330 \\
+    3 & Aarush Oak        & 23332 \\
+    4 & Prathamesh Kinagi & 23340 \\
+    \bottomrule
+    \end{tabular}
+
+    \vspace{2.5cm}
+    {\small\color{gray} Academic Year 2025--26}
+    \vfill
+    {\small\color{gray} Compiled on \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ── Issues Found & Fixed ──────────────────────────────────────────────────────
+\section{Issues Found and Fixed in the Spec}
+
+The following issues were identified in the original \texttt{main.tex} and
+\texttt{database\_structure.tex} documents. All are corrected in this
+implementation plan.
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 1 --- Password stored in plaintext.}
+The spec stores DB credentials only in \texttt{.gitdb/config.json}.
+\textbf{Fix:} Use the OS-level \texttt{keyring} library. Only the keyring
+service key (e.g.\ \texttt{gitdb:repo\_1}) is stored in config; the actual
+password is retrieved at runtime via
+\texttt{keyring.get\_password(service, username)}.
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 2 --- No \texttt{UNIQUE} constraint on \texttt{parent\_hash}.}
+The spec correctly states no two commits may share a parent (linear chain), but
+the DDL never enforces this at the database level.
+\textbf{Fix:} Add \texttt{UNIQUE KEY uq\_parent\_hash (parent\_hash)} to the
+\texttt{commits} table.
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 3 --- No user registration flow in \texttt{gitdb init}.}
+The spec defines a \texttt{user} table with authentication but the \texttt{gitdb
+init} command only accepts DB connection arguments --- there is no way to create
+a user.
+\textbf{Fix:} Add a \texttt{gitdb register} command that creates a user account
+with an argon2-hashed password, and make \texttt{--author} required on
+\texttt{gitdb init}.
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 4 --- \texttt{gitdb commit --author} is a free-text flag.}
+This bypasses the foreign key to \texttt{user} and breaks authorship integrity.
+\textbf{Fix:} \texttt{--author} resolves a \texttt{username} from
+\texttt{gitdb\_meta.user} via a \texttt{SELECT} query; a raw name string is
+never accepted.
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 5 --- \texttt{react-diff-viewer} is unmaintained.}
+Last release was 2021 with a peer dependency on React~16 --- incompatible with
+the specified React~18.
+\textbf{Fix:} Replace with \texttt{@git-diff-view/react}, which is actively
+maintained and supports React~18.
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 6 --- No recovery path if Phase~1 checkout fails mid-way.}
+If DDL application fails and the subsequent re-apply of the old schema also
+fails, the user is left with an inconsistent database and no manual escape route.
+\textbf{Fix:} Before any DDL is applied, the pre-checkout snapshot is emitted as
+a \texttt{.gitdb/recovery\_\{timestamp\}.sql} file. The user can always run
+this file manually to restore the prior state.
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Issue 7 --- \texttt{SELECT *} for snapshotting is non-deterministic.}
+The spec describes ``primary-key ordering'' in prose but the SQL shown is a bare
+\texttt{SELECT *} with no \texttt{ORDER BY}, making hashes non-reproducible.
+\textbf{Fix:} All snapshot queries explicitly use
+\texttt{ORDER BY \{pk\_columns\}}.
+\end{tcolorbox}
+
+% ── Repo Scaffold ─────────────────────────────────────────────────────────────
+\section{Repository Scaffold}
+
+Set up the following directory structure before writing any engine code.
+Keeping the CLI, engine, API, and frontend in separate top-level packages
+ensures each is independently testable from day one.
+
+\begin{tcolorbox}[commandbox, title=Project Directory Layout]
+\begin{lstlisting}
+gitdb/
+|-- engine/
+|   |-- snapshot.py     # DB introspection + row capture
+|   |-- diff.py         # Schema + data diff engine
+|   |-- hash.py         # SHA-256 Merkle hash
+|   `-- checkout.py     # Two-phase checkout
+|-- cli/
+|   `-- main.py         # click + rich entry point
+|-- api/
+|   `-- app.py          # Flask REST wrapper
+|-- ui/
+|   `-- src/            # React 18 + Tailwind + Vite
+|-- db/
+|   `-- schema.sql      # Canonical DDL (with all fixes applied)
+`-- tests/
+    |-- unit/
+    `-- integration/
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[infobox]
+Use a \texttt{pyproject.toml} with \texttt{pip install -e .} so the
+\texttt{gitdb} command is available on PATH during development without manual
+path manipulation.
+\end{tcolorbox}
+
+% ── Phase 0 ───────────────────────────────────────────────────────────────────
+\section{Phase 0 --- Environment Setup}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{Runtime requirements:} Python 3.10+, Node 18+, MySQL 8.0+
+    \item \textbf{Python dependencies:} \texttt{mysql-connector-python},
+    \texttt{sqlglot}, \texttt{click}, \texttt{rich}, \texttt{flask},
+    \texttt{flask-cors}, \texttt{argon2-cffi}, \texttt{keyring}
+    \item \textbf{Node dependencies (inside \texttt{ui/}):} \texttt{react},
+    \texttt{react-dom}, \texttt{@xyflow/react} (react-flow),
+    \texttt{@git-diff-view/react}, \texttt{tailwindcss}, \texttt{vite}
+    \item Create a local \texttt{gitdb\_meta} MySQL instance for development and
+    integration testing
+\end{itemize}
+
+% ── Phase 1 ───────────────────────────────────────────────────────────────────
+\section{Phase 1 --- \texttt{gitdb\_meta} Database Setup}
+
+Write \texttt{db/schema.sql} with two corrections applied over the original spec.
+
+\begin{tcolorbox}[fixbox]
+\textbf{Fix applied:} \texttt{UNIQUE KEY uq\_parent\_hash (parent\_hash)}
+added to \texttt{commits} to enforce the linear chain at the database level.
+A new \texttt{db\_password\_key VARCHAR(100)} column is added to
+\texttt{repository} to store the OS keyring service key --- never the password.
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{db/schema.sql} --- Complete DDL]
+\begin{lstlisting}[language=SQL]
+CREATE DATABASE IF NOT EXISTS gitdb_meta;
+USE gitdb_meta;
+
+-- Users (authentication + authorship)
+CREATE TABLE user (
+    user_id       INT          NOT NULL AUTO_INCREMENT,
+    username      VARCHAR(50)  NOT NULL,
+    email         VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name     VARCHAR(100) NOT NULL,
+    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    UNIQUE KEY uq_username (username),
+    UNIQUE KEY uq_email    (email)
+);
+
+-- Repositories (connection config + HEAD pointer)
+CREATE TABLE repository (
+    repo_id         INT          NOT NULL AUTO_INCREMENT,
+    user_id         INT          NOT NULL,
+    repo_name       VARCHAR(100) NOT NULL,
+    target_db_name  VARCHAR(100) NOT NULL,
+    db_host         VARCHAR(100) NOT NULL,
+    db_port         INT          NOT NULL DEFAULT 3306,
+    db_user         VARCHAR(50)  NOT NULL,
+    db_password_key VARCHAR(100) NULL,   -- keyring key, not the password
+    current_hash    CHAR(64)     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (repo_id),
+    CONSTRAINT fk_repo_user
+        FOREIGN KEY (user_id) REFERENCES user (user_id)
+);
+
+-- Commits (linear Merkle chain)
+CREATE TABLE commits (
+    hash         CHAR(64) NOT NULL,
+    repo_id      INT      NOT NULL,
+    parent_hash  CHAR(64) NULL,
+    author_id    INT      NOT NULL,
+    message      TEXT     NOT NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (hash),
+    UNIQUE KEY uq_parent_hash (parent_hash),  -- enforces linear chain
+    CONSTRAINT fk_commit_repo
+        FOREIGN KEY (repo_id)     REFERENCES repository (repo_id),
+    CONSTRAINT fk_commit_parent
+        FOREIGN KEY (parent_hash) REFERENCES commits    (hash),
+    CONSTRAINT fk_commit_author
+        FOREIGN KEY (author_id)   REFERENCES user       (user_id)
+);
+
+-- Deferred FK: resolves circular dependency between repository and commits
+ALTER TABLE repository
+    ADD CONSTRAINT fk_repo_head
+        FOREIGN KEY (current_hash) REFERENCES commits (hash);
+
+-- Snapshots (full schema + data per table per commit)
+CREATE TABLE snapshots (
+    id           BIGINT       NOT NULL AUTO_INCREMENT,
+    commit_hash  CHAR(64)     NOT NULL,
+    table_name   VARCHAR(255) NOT NULL,
+    ddl_json     LONGTEXT     NOT NULL,
+    rows_json    LONGTEXT     NOT NULL,
+    row_count    INT          NOT NULL,
+    captured_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_commit_table (commit_hash, table_name),
+    CONSTRAINT fk_snap_commit
+        FOREIGN KEY (commit_hash) REFERENCES commits (hash)
+);
+\end{lstlisting}
+\end{tcolorbox}
+
+% ── Phase 2 ───────────────────────────────────────────────────────────────────
+\section{Phase 2 --- \texttt{gitdb register} and \texttt{gitdb init}}
+
+\subsection{\texttt{gitdb register} (new command)}
+
+This command is required because \texttt{gitdb init} needs a valid
+\texttt{author\_id} FK, but the original spec provides no mechanism to create
+a user.
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb register}]
+\begin{lstlisting}
+gitdb register
+\end{lstlisting}
+\textcolor{codetext}{\small Prompts interactively for \texttt{username},
+\texttt{email}, \texttt{full\_name}, and \texttt{password} (via
+\texttt{getpass} --- never echoed). Hashes the password with
+\texttt{argon2-cffi} (\texttt{argon2.PasswordHasher().hash(password)}).
+Inserts into \texttt{gitdb\_meta.user} and prints the new \texttt{user\_id}.}
+\end{tcolorbox}
+
+\subsection{\texttt{gitdb init}}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb init}]
+\begin{lstlisting}
+gitdb init --host localhost --port 3306      \
+           --user root --password secret     \
+           --database myapp_db              \
+           --repo-name my-repo              \
+           --author <username>
+\end{lstlisting}
+\textcolor{codetext}{\small Connects to MySQL, creates \texttt{gitdb\_meta}
+and all four tables if not present (runs \texttt{schema.sql}). Validates that
+\texttt{--author} resolves to an active user in \texttt{gitdb\_meta.user}.
+Inserts a row into \texttt{repository} with \texttt{current\_hash = NULL}.
+Stores the password securely via
+\texttt{keyring.set\_password("gitdb", "repo\_\{id\}", password)} and writes
+only the keyring service key to \texttt{repository.db\_password\_key}.
+Writes \texttt{.gitdb/config.json} with no password.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{.gitdb/config.json} --- written by \texttt{gitdb init}]
+\begin{lstlisting}[language={}]
+{
+  "repo_id": 1,
+  "host":    "localhost",
+  "port":    3306,
+  "db_user": "root",
+  "db_name": "myapp_db"
+}
+\end{lstlisting}
+\textcolor{codetext}{\small No password is ever written to this file.}
+\end{tcolorbox}
+
+% ── Phase 3 ───────────────────────────────────────────────────────────────────
+\section{Phase 3 --- Snapshot Engine (\texttt{engine/snapshot.py})}
+
+Core data capture layer. Called at every \texttt{gitdb commit}.
+
+\begin{tcolorbox}[commandbox, title=Function Signature]
+\begin{lstlisting}[language=Python]
+def capture_snapshot(conn, db_name: str) -> dict[str, TableSnapshot]
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Capture Steps}
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+    \item Query \texttt{information\_schema.TABLES} to get all
+    \texttt{BASE TABLE} names for \texttt{db\_name}.
+
+    \item For each table, check primary key existence via
+    \texttt{information\_schema.KEY\_COLUMN\_USAGE WHERE CONSTRAINT\_NAME =
+    'PRIMARY'}. If none exists: emit a \texttt{rich} warning panel and skip
+    data capture for that table (\texttt{rows\_json = []},
+    \texttt{row\_count = 0}). DDL is still captured.
+
+    \item \textbf{Capture \texttt{ddl\_json}} --- structured representation
+    from \texttt{information\_schema.COLUMNS} plus the raw output of
+    \texttt{SHOW CREATE TABLE} stored under the key \texttt{raw\_ddl}.
+    The \texttt{raw\_ddl} string is used by \texttt{sqlglot} in the diff engine.
+
+    \item \textbf{Capture \texttt{rows\_json}} --- \texttt{ORDER BY} on all
+    primary key columns is mandatory for deterministic hashing:
+\end{enumerate}
+
+\begin{tcolorbox}[commandbox, title=Row Capture Query (deterministic ordering)]
+\begin{lstlisting}[language=SQL]
+SELECT * FROM `{table}` ORDER BY `pk_col1`, `pk_col2`;
+\end{lstlisting}
+\textcolor{codetext}{\small If \texttt{COUNT(*) > 10000}, raise
+\texttt{SnapshotRowLimitError} with a clear message before fetching any rows.}
+\end{tcolorbox}
+
+\subsection{\texttt{TableSnapshot} Dataclass --- Shared Integration Contract}
+
+\begin{tcolorbox}[fixbox]
+\textbf{Integration contract:} Aditya defines and exports this dataclass from
+\texttt{engine/snapshot.py} in \textbf{Week~1}. All other team members import
+it. This is the single shared type that prevents workstreams from blocking
+each other.
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{TableSnapshot} Dataclass]
+\begin{lstlisting}[language=Python]
+@dataclass
+class TableSnapshot:
+    table_name: str
+    ddl_json:   dict        # column metadata + raw_ddl string
+    rows_json:  list[dict]  # list of row dicts, ordered by PK
+    row_count:  int
+    pk_columns: list[str]   # empty list if no primary key
+\end{lstlisting}
+\end{tcolorbox}
+
+% ── Phase 4 ───────────────────────────────────────────────────────────────────
+\section{Phase 4 --- Hashing Engine (\texttt{engine/hash.py})}
+
+\begin{tcolorbox}[commandbox, title=Function Signature]
+\begin{lstlisting}[language=Python]
+def compute_commit_hash(
+    snapshot: dict[str, TableSnapshot],
+    parent_hash: str | None
+) -> str
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+    \item Serialise \texttt{snapshot} to JSON with sorted keys:
+    \texttt{json.dumps(snapshot\_dict, sort\_keys=True)}
+    \item Concatenate with parent hash (empty string for the root commit)
+    \item Return \texttt{hashlib.sha256(payload).hexdigest()} --- 64-char hex
+\end{enumerate}
+
+\begin{tcolorbox}[commandbox, title=Hash Construction]
+\begin{lstlisting}[language=Python]
+payload = json_bytes + (parent_hash or "").encode("utf-8")
+return hashlib.sha256(payload).hexdigest()
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[infobox]
+\textbf{Determinism guarantee:} Same DB state + same parent hash always
+produces the same commit hash. Any modification to a historical snapshot
+immediately invalidates all subsequent hashes in the Merkle chain.
+\end{tcolorbox}
+
+% ── Phase 5 ───────────────────────────────────────────────────────────────────
+\section{Phase 5 --- Diff Engine (\texttt{engine/diff.py})}
+
+Two independent sub-engines, composed into a single \texttt{diff(hash1, hash2)}
+function returning a \texttt{DiffResult}.
+
+\subsection{Schema Diff (using \texttt{sqlglot})}
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+    \item Load \texttt{ddl\_json["raw\_ddl"]} for both snapshots from
+    \texttt{gitdb\_meta.snapshots}
+    \item Parse each DDL string:
+    \texttt{sqlglot.parse\_one(raw\_ddl, dialect="mysql")}
+    \item Compare column sets and generate SQL accordingly
+\end{enumerate}
+
+\vspace{0.5em}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{4.5cm} X}
+\rowcolor{tableheader}
+\textcolor{white}{\normalfont\bfseries Scenario} &
+\textcolor{white}{\normalfont\bfseries Generated Output} \\
+\midrule
+Table in new, not in old      & \texttt{CREATE TABLE ...} \\
+\rowcolor{lightgray}
+Table in old, not in new      & \texttt{DROP TABLE IF EXISTS ...} \\
+Column added                   & \texttt{ALTER TABLE ... ADD COLUMN ...} \\
+\rowcolor{lightgray}
+Column dropped                 & \texttt{ALTER TABLE ... DROP COLUMN ...} \\
+Column type changed            & Warning banner + SQL comment (not silently handled) \\
+\rowcolor{lightgray}
+Table or column renamed        & Warning banner + SQL comment (ambiguous --- user must resolve) \\
+\end{tabularx}
+\vspace{0.5em}
+
+\begin{tcolorbox}[infobox]
+Column type changes and renames are intentionally flagged rather than
+silently auto-handled, consistent with the design philosophy of
+Prisma and Atlas: correctness over convenience.
+\end{tcolorbox}
+
+\subsection{Data Diff (Primary-Key Anchored, $O(n)$)}
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+    \item Load \texttt{rows\_json} for both snapshots from
+    \texttt{gitdb\_meta.snapshots}
+    \item Index both as \texttt{dict[pk\_tuple, row\_dict]}
+    \item Compare keys and values:
+\end{enumerate}
+
+\vspace{0.5em}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{5cm} X}
+\rowcolor{tableheader}
+\textcolor{white}{\normalfont\bfseries Scenario} &
+\textcolor{white}{\normalfont\bfseries Generated Output} \\
+\midrule
+Key in new, not in old         & \texttt{INSERT INTO ... VALUES (...)} \\
+\rowcolor{lightgray}
+Key in both, values differ     & \texttt{UPDATE ... SET ... WHERE pk = ...} \\
+Key in old, not in new         & \texttt{DELETE FROM ... WHERE pk = ...} \\
+\end{tabularx}
+\vspace{0.5em}
+
+\subsection{\texttt{DiffResult} Output Structure}
+
+\begin{tcolorbox}[commandbox, title=\texttt{DiffResult} Dataclass]
+\begin{lstlisting}[language=Python]
+@dataclass
+class DiffResult:
+    schema_sql: list[str]   # ordered: CREATE, ALTER, DROP
+    data_sql:   list[str]   # ordered: INSERT, UPDATE, DELETE
+    warnings:   list[str]   # type changes, renames, no-PK tables
+\end{lstlisting}
+\end{tcolorbox}
+
+% ── Phase 6 ───────────────────────────────────────────────────────────────────
+\section{Phase 6 --- Checkout Engine (\texttt{engine/checkout.py})}
+
+Two-phase strategy that handles MySQL DDL auto-commit explicitly.
+
+\begin{tcolorbox}[warningbox]
+\textbf{MySQL DDL Note:} \texttt{ALTER TABLE}, \texttt{DROP TABLE}, and
+\texttt{CREATE TABLE} issue implicit commits and cannot be rolled back in a
+standard transaction. GitDB's two-phase checkout accounts for this explicitly.
+\end{tcolorbox}
+
+\subsection{Phase 1 --- Schema}
+
+\begin{tcolorbox}[commandbox, title=Phase 1 --- Schema Application with Recovery]
+\begin{lstlisting}[language=Python]
+for stmt in diff.schema_sql:
+    try:
+        cursor.execute(stmt)
+    except Exception as e:
+        # DDL already auto-committed -- restore from snapshot
+        restore_schema_from_snapshot(conn, old_snapshot)
+        write_recovery_file(
+            old_snapshot,
+            path=".gitdb/recovery_{timestamp}.sql"
+        )
+        raise CheckoutSchemaError(str(e))
+\end{lstlisting}
+\textcolor{codetext}{\small \texttt{restore\_schema\_from\_snapshot}
+re-executes the \texttt{raw\_ddl} strings from the pre-checkout snapshot.
+\texttt{write\_recovery\_file} emits a \texttt{.sql} file the user can
+run manually if restore also fails --- this is the fix for Issue~6.}
+\end{tcolorbox}
+
+\subsection{Phase 2 --- Data}
+
+\begin{tcolorbox}[commandbox, title=Phase 2 --- Data Patch (Transactional)]
+\begin{lstlisting}[language=SQL]
+SET FOREIGN_KEY_CHECKS = 0;
+-- ... execute all INSERT / UPDATE / DELETE statements ...
+SET FOREIGN_KEY_CHECKS = 1;
+\end{lstlisting}
+\textcolor{codetext}{\small Wrapped in an explicit \texttt{BEGIN} /
+\texttt{COMMIT} transaction. On any exception, \texttt{ROLLBACK} is called
+automatically. Since the target state is always a known-good snapshot,
+re-enabling foreign key checks after the patch guarantees referential
+integrity of the final state.}
+\end{tcolorbox}
+
+\subsection{On Success}
+
+\begin{tcolorbox}[commandbox, title=HEAD Pointer Update]
+\begin{lstlisting}[language=SQL]
+UPDATE gitdb_meta.repository
+SET    current_hash = %s
+WHERE  repo_id = %s;
+\end{lstlisting}
+\end{tcolorbox}
+
+% ── Phase 7 ───────────────────────────────────────────────────────────────────
+\section{Phase 7 --- CLI (\texttt{cli/main.py})}
+
+Built with \texttt{click} and \texttt{rich}. All commands load
+\texttt{.gitdb/config.json}, retrieve the password from the OS keyring,
+and open two MySQL connections: one to \texttt{gitdb\_meta}, one to the
+target database.
+
+\subsection{Command Reference}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb register}]
+\begin{lstlisting}
+gitdb register
+\end{lstlisting}
+\textcolor{codetext}{\small Creates a user in \texttt{gitdb\_meta.user}
+with an argon2-hashed password. Prompts interactively --- no plaintext
+password is ever passed as a CLI argument.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb init}]
+\begin{lstlisting}
+gitdb init --host HOST --port PORT --user USER \
+           --password PASS --database DB       \
+           --repo-name NAME --author USERNAME
+\end{lstlisting}
+\textcolor{codetext}{\small Creates \texttt{gitdb\_meta}, registers the
+repository, writes \texttt{.gitdb/config.json}, and stores the password
+in the OS keyring.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb commit}]
+\begin{lstlisting}
+gitdb commit -m "message" --author USERNAME
+\end{lstlisting}
+\textcolor{codetext}{\small Resolves \texttt{--author} to a \texttt{user\_id}
+via \texttt{SELECT user\_id FROM gitdb\_meta.user WHERE username = \%s AND
+is\_active = TRUE}. Aborts with a clear error if not found. Calls
+\texttt{capture\_snapshot} $\to$ \texttt{compute\_commit\_hash} $\to$ inserts
+into \texttt{commits} and \texttt{snapshots} $\to$ updates
+\texttt{current\_hash}.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb log}]
+\begin{lstlisting}
+gitdb log [--oneline] [--graph]
+\end{lstlisting}
+\textcolor{codetext}{\small Walks the \texttt{parent\_hash} chain from
+\texttt{current\_hash}. Renders with \texttt{rich.table}.
+\texttt{--oneline} shows \texttt{<short\_hash> <message>}.
+\texttt{--graph} renders a simple ASCII \texttt{*} chain.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb diff}]
+\begin{lstlisting}
+gitdb diff <hash1> <hash2> [--schema-only] [--data-only]
+\end{lstlisting}
+\textcolor{codetext}{\small Runs the diff engine. Prints generated SQL
+with \texttt{rich.syntax} (SQL highlighting). Warnings shown as amber
+panels above the output.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb checkout}]
+\begin{lstlisting}
+gitdb checkout <commit_hash>
+\end{lstlisting}
+\textcolor{codetext}{\small Executes the two-phase checkout. On Phase~1
+failure: prints the recovery file path. On Phase~2 failure: shows rollback
+confirmation.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{gitdb status}]
+\begin{lstlisting}
+gitdb status
+\end{lstlisting}
+\textcolor{codetext}{\small Compares the live database against the HEAD
+snapshot. Reports: added tables (in live DB, not in snapshot), dropped tables
+(in snapshot, not in live DB), modified tables (column differences), and row
+count deltas per table.}
+\end{tcolorbox}
+
+% ── Phase 8 ───────────────────────────────────────────────────────────────────
+\section{Phase 8 --- Flask REST API (\texttt{api/app.py})}
+
+Thin HTTP wrapper. All business logic lives in the engine layer --- Flask only
+calls it and serialises results to JSON. Enable \texttt{flask-cors} for local
+development (React runs on a different port).
+
+\vspace{0.5em}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{4.5cm} >{\ttfamily}p{1.5cm} X}
+\rowcolor{tableheader}
+\textcolor{white}{\normalfont\bfseries Endpoint} &
+\textcolor{white}{\normalfont\bfseries Method} &
+\textcolor{white}{\normalfont\bfseries Description} \\
+\midrule
+/commits & GET & JSON array of commits, reverse-chronological \\
+\rowcolor{lightgray}
+/commit  & POST & Body: \{ message, author\_username \}. Returns \{ hash \} \\
+/diff/<h1>/<h2> & GET & Returns \{ schema\_sql, data\_sql, warnings \} \\
+\rowcolor{lightgray}
+/checkout/<hash> & POST & Two-phase checkout. Returns \{ ok \} or \{ error, recovery\_file \} \\
+/status & GET & Returns \{ added\_tables, dropped\_tables, modified\_tables, row\_deltas \} \\
+\end{tabularx}
+\vspace{0.5em}
+
+\begin{tcolorbox}[infobox]
+All error responses return \texttt{\{ "error": "..." \}} with an appropriate
+HTTP status code. The \texttt{recovery\_file} field is included in checkout
+error responses so the UI can surface it to the user directly.
+\end{tcolorbox}
+
+% ── Phase 9 ───────────────────────────────────────────────────────────────────
+\section{Phase 9 --- React UI (\texttt{ui/})}
+
+Vite + React~18 + Tailwind CSS. Three views navigated from a persistent
+sidebar.
+
+\subsection{View 1 --- Commit Graph}
+
+Built with \texttt{react-flow}. Each commit is rendered as a node in a
+vertical linear chain.
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Node content: short hash (first 8 characters), commit message,
+    author \texttt{full\_name}, timestamp
+    \item HEAD node visually highlighted with an accent border and background
+    \item Clicking a node opens a side panel showing the full hash, a checkout
+    button, and a ``diff from HEAD'' shortcut
+\end{itemize}
+
+\subsection{View 2 --- Diff Viewer}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Two commit dropdowns to select \texttt{hash1} and \texttt{hash2}
+    \item Calls \texttt{GET /diff/<h1>/<h2>}
+    \item Renders using \texttt{@git-diff-view/react} (replaces the
+    unmaintained \texttt{react-diff-viewer})
+    \item Schema SQL in left panel, data SQL in right panel
+    \item Toggle: Schema only / Data only / Both
+    \item Warnings (column type changes, no-PK tables) shown as amber banners
+    above the diff output
+\end{itemize}
+
+\subsection{View 3 --- Schema Browser}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Commit selector dropdown
+    \item Displays \texttt{ddl\_json} for each table at the selected commit
+    as a structured table with columns: name, type, nullable, key, default,
+    extra
+    \item Read-only --- no mutations from this view
+\end{itemize}
+
+% ── Phase 10 ──────────────────────────────────────────────────────────────────
+\section{Phase 10 --- Testing Strategy}
+
+\subsection{Unit Tests (pytest, no live DB required)}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \texttt{test\_diff.py} --- feed two hand-crafted
+    \texttt{TableSnapshot} dicts, assert exact SQL output for adds, drops,
+    modifies, and deletes
+    \item \texttt{test\_hash.py} --- assert determinism (same input $\to$
+    same hash; different input $\to$ different hash; parent hash propagation)
+    \item \texttt{test\_snapshot.py} --- mock \texttt{mysql-connector-python}
+    cursor, assert correct queries are issued including \texttt{ORDER BY pk}
+\end{itemize}
+
+\subsection{Integration Tests (require local MySQL instance)}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{Full round-trip:} commit state~A $\to$ modify DB $\to$
+    commit state~B $\to$ \texttt{checkout A} $\to$ assert DB matches
+    state~A exactly
+    \item \textbf{FK ordering:} snapshot a DB with FK-linked tables,
+    checkout, assert no referential integrity violations
+    \item \textbf{Row limit:} seed 10,001 rows, assert
+    \texttt{SnapshotRowLimitError} is raised before any data is fetched
+    \item \textbf{Schema-only checkout:} add a column $\to$ commit $\to$
+    drop it $\to$ commit $\to$ checkout prior commit $\to$ assert column
+    restored correctly
+\end{itemize}
+
+\subsection{API Tests (pytest + \texttt{flask.testing.FlaskClient})}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Happy path + error path for each endpoint
+    \item Checkout failure path: assert \texttt{recovery\_file} field is
+    present in the error response JSON
+\end{itemize}
+
+% ── Phase 11 ──────────────────────────────────────────────────────────────────
+\section{Phase 11 --- Team Ownership and Delivery Schedule}
+
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.8cm} X >{\centering\arraybackslash}p{2cm}}
+\rowcolor{tableheader}
+\textcolor{white}{\normalfont\bfseries Member} &
+\textcolor{white}{\normalfont\bfseries Owns} &
+\textcolor{white}{\normalfont\bfseries By} \\
+\midrule
+Aditya Malode
+    & \texttt{engine/snapshot.py}, \texttt{engine/hash.py},
+      \texttt{db/schema.sql}, \texttt{gitdb init},
+      \texttt{gitdb register}
+    & Week 1 \\
+\rowcolor{lightgray}
+Rohan Natekar
+    & \texttt{engine/diff.py} (schema diffing with \texttt{sqlglot}),
+      CLI: \texttt{gitdb diff}, \texttt{gitdb status}
+    & Week 2 \\
+Aarush Oak
+    & \texttt{engine/checkout.py} (two-phase),
+      CLI: \texttt{gitdb commit}, \texttt{gitdb log},
+      \texttt{gitdb checkout}
+    & Week 2 \\
+\rowcolor{lightgray}
+Prathamesh Kinagi
+    & \texttt{api/app.py} (Flask REST API),
+      entire React UI (all three views)
+    & Week 3 \\
+\end{tabularx}
+
+\vspace{1em}
+
+\begin{tcolorbox}[fixbox]
+\textbf{Integration contract:} Aditya defines and exports the
+\texttt{TableSnapshot} dataclass from \texttt{engine/snapshot.py} in
+\textbf{Week~1}. All other team members import it from this module. This is
+the single shared type that keeps all four workstreams from blocking each
+other.
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=\texttt{TableSnapshot} --- Week 1 Contract (engine/snapshot.py)]
+\begin{lstlisting}[language=Python]
+@dataclass
+class TableSnapshot:
+    table_name: str
+    ddl_json:   dict        # column metadata + raw_ddl string
+    rows_json:  list[dict]  # list of row dicts, ordered by PK
+    row_count:  int
+    pk_columns: list[str]   # empty list if no primary key
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Dependency Map}
+
+\begin{tcolorbox}[infobox]
+\begin{itemize}[leftmargin=1.5em, itemsep=0.2em]
+    \item \texttt{gitdb init / register} $\to$ \texttt{schema.sql}
+    (Phase~1) + \texttt{keyring} (Phase~2)
+    \item \texttt{gitdb commit} $\to$ \texttt{snapshot.py} (Phase~3)
+    + \texttt{hash.py} (Phase~4)
+    \item \texttt{gitdb diff} $\to$ \texttt{diff.py} (Phase~5)
+    \item \texttt{gitdb checkout} $\to$ \texttt{diff.py} (Phase~5)
+    + \texttt{checkout.py} (Phase~6)
+    \item Flask API $\to$ all engine modules
+    \item React UI $\to$ Flask API
+\end{itemize}
+\end{tcolorbox}
+
+\end{document}

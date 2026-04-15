@@ -1,0 +1,168 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+
+\definecolor{sectioncolor}{RGB}{30, 80, 150}
+
+\titleformat{\section}{\large\bfseries\color{sectioncolor}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=sectioncolor,
+    urlcolor=sectioncolor
+}
+
+\title{
+    \textbf{GitDB: Version Control System for MySQL Databases} \\[0.4em]
+    \large Abstract and Feasibility Study \\[0.4em]
+    \normalsize DISL Mini Project --- SY-11, Lab Batch F-11 \\
+    Pune Institute of Computer Technology (PICT), Pune
+}
+
+\author{
+    Aditya Malode (23325) \and
+    Rohan Natekar (23330) \and
+    Aarush Oak (23332) \and
+    Prathamesh Kinagi (23340)
+}
+
+\date{Academic Year 2025--26}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\section{Abstract}
+
+Version control has become a foundational pillar of modern software engineering.
+Systems like Git allow developers to snapshot code, inspect historical changes,
+revert to any prior state, and collaborate across teams with full auditability.
+Yet despite MySQL databases being a critical component of almost every production
+software system, they have never enjoyed an equivalent first-class versioning
+mechanism. Schema changes are typically managed through manually written migration
+scripts that are fragile, difficult to audit, and entirely disconnected from the
+data they govern. Data rollbacks, when needed, require either expensive full
+database dumps or complex reconstruction --- neither of which resembles the
+intuitive commit-and-revert workflow developers take for granted with source code.
+
+\textbf{GitDB} addresses this gap directly. It is a MySQL-native, state-based
+version control system designed to bring Git-like semantics --- \texttt{commit},
+\texttt{log}, \texttt{diff}, and \texttt{checkout} --- to MySQL database management
+without requiring developers to manually author SQL migration scripts. The central
+idea is simple: instead of tracking \textit{instructions} for how to reach a state,
+GitDB tracks the \textit{state itself}.
+
+At every commit, a complete snapshot of the target MySQL database's schema (DDL)
+and data is captured and persisted into a dedicated metadata database named
+\texttt{gitdb\_meta}. This clean separation mirrors the way Git's \texttt{.git/}
+directory is isolated from the source files it tracks. Each commit is identified
+by a SHA-256 hash computed from its content serialisation and the hash of its
+parent commit, forming an immutable, tamper-evident Merkle chain.
+
+The system's core technical contribution is its diff engine, which takes two
+commit snapshots and automatically generates the MySQL SQL necessary to transition
+the live database from one state to another. Schema diffing is performed at the
+Abstract Syntax Tree (AST) level using \texttt{sqlglot}, correctly identifying
+added tables, dropped tables, and altered columns. Data diffing uses a
+primary-key-anchored algorithm operating in $O(n)$ time.
+
+A key engineering challenge specific to MySQL is that DDL statements issue
+implicit commits and cannot be rolled back in a standard transaction. GitDB
+handles this through a \textbf{two-phase checkout strategy}: schema changes are
+applied and validated first; data patches are then applied inside an explicit
+transaction with rollback on failure.
+
+The system is delivered through two complementary interfaces: a command-line
+interface built with \texttt{click} and \texttt{rich} providing Git-familiar
+commands, and a web-based interface built in React~18 with Tailwind CSS offering
+a visual commit graph and side-by-side diff viewer.
+
+\medskip
+\noindent\textbf{Keywords:} MySQL, Version Control, State-Based Snapshotting,
+Schema Diffing, SQL Patch Generation, Merkle Hash Chain, DDL Auto-Commit,
+Two-Phase Checkout, Python, React, Flask.
+
+\section{Feasibility Study}
+
+\subsection{Technical Feasibility}
+
+GitDB is built entirely on mature, production-grade technologies with no
+experimental dependencies. The following aspects confirm technical feasibility:
+
+\begin{itemize}[leftmargin=1.5em]
+
+    \item \textbf{MySQL Information Schema:} MySQL natively exposes full schema
+    metadata via \texttt{information\_schema.TABLES}, \texttt{information\_schema.COLUMNS},
+    and \texttt{SHOW CREATE TABLE}. These are stable, documented APIs that make
+    schema introspection reliable without any reverse engineering.
+
+    \item \textbf{State-based snapshotting:} Capturing schema and data as JSON
+    blobs at each commit is straightforward using Python's \texttt{mysql-connector}
+    and the standard \texttt{json} library. The 10,000-row per table limit keeps
+    snapshot sizes manageable within a mini-project scope.
+
+    \item \textbf{AST-level diffing:} The \texttt{sqlglot} library provides
+    robust SQL parsing across dialects including MySQL, enabling structural
+    comparison of DDL at the AST level rather than fragile text comparison.
+
+    \item \textbf{Merkle hashing:} SHA-256 via Python's \texttt{hashlib} is
+    deterministic and collision-resistant, making it suitable for commit
+    identification and tamper detection without any cryptographic overhead.
+
+    \item \textbf{DDL Auto-Commit workaround:} MySQL's implicit DDL commit is
+    a well-documented limitation. The two-phase checkout strategy --- applying
+    schema changes first and falling back to the stored snapshot on failure ---
+    is a principled engineering solution that does not require patching MySQL or
+    using non-standard drivers.
+
+    \item \textbf{Web interface:} React~18, Tailwind CSS, \texttt{react-flow},
+        and \texttt{@git-diff-view/react} are stable, widely adopted libraries.
+    Flask provides a lightweight REST backend with minimal configuration.
+
+\end{itemize}
+
+\subsection{Operational Feasibility}
+
+GitDB is designed to be operationally straightforward for its target users:
+
+\begin{itemize}[leftmargin=1.5em]
+
+    \item \textbf{Familiar interface:} The CLI mirrors Git's command structure
+    (\texttt{init}, \texttt{commit}, \texttt{log}, \texttt{diff},
+    \texttt{checkout}, \texttt{status}), reducing the learning curve for
+    developers already familiar with Git.
+
+    \item \textbf{No schema modification:} The target MySQL database is never
+    structurally altered by GitDB itself. All metadata lives in the separate
+    \texttt{gitdb\_meta} database, ensuring zero pollution of the versioned
+    database.
+
+    \item \textbf{Self-contained deployment:} GitDB requires only a running
+    MySQL instance, Python~3.10+, and Node.js for the frontend. No additional
+    infrastructure (message queues, object storage, external APIs) is needed.
+
+    \item \textbf{Documented constraints:} Column type changes and table renames
+    are explicitly flagged rather than silently mishandled, consistent with the
+    design philosophy of production tools like Prisma and Atlas.
+
+\end{itemize}
+
+
+\medskip
+GitDB is a well-scoped, technically grounded mini-project that demonstrates
+substantive breadth across core DBMS concepts --- schema introspection, ACID
+properties, DDL constraints, cryptographic integrity, and relational modelling ---
+while delivering a working system that solves a real and recognised problem in
+MySQL development workflows.
+
+\end{document}
