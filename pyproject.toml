@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitdb"
+version = "0.1.0"
+description = "Git-like version control for MySQL databases (DISL mini project)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "mysql-connector-python",
+  "sqlglot",
+  "click",
+  "rich",
+  "flask",
+  "flask-cors",
+  "argon2-cffi",
+  "keyring",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+
+[project.scripts]
+gitdb = "cli.main:gitdb"
+
+[tool.setuptools]
+packages = ["engine", "cli", "api"]
+

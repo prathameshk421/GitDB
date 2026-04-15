@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+.ruff_cache/
+.mypy_cache/
+.tox/
+.eggs/
+*.egg-info/
+build/
+dist/
+.DS_Store
+.gitdb/
+ui/node_modules/
+ui/dist/
