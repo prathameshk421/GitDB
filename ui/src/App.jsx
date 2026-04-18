@@ -1,5 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
+import { DiffView, DiffModeEnum } from "@git-diff-view/react";
+import { generateDiffFile } from "@git-diff-view/file";
 import { getCommits, getDiff, getSnapshot, getStatus, postCheckout } from "./api.js";
+import CommitNode from "./components/CommitNode.jsx";
+import { buildGraphElements, applyDagreLayout } from "./components/graphUtils.js";
+
+const nodeTypes = { commitNode: CommitNode };
+
+function snapshotToDDLText(snapshot) {
+  return snapshot
+    .slice()
+    .sort((a, b) => a.table_name.localeCompare(b.table_name))
+    .map((table) => table.ddl?.raw_ddl ?? "")
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 function Sidebar({ page, setPage }) {
   const items = [
@@ -48,31 +64,32 @@ function Card({ title, children }) {
 }
 
 function CommitGraphView({ commits, onCheckout }) {
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+
+  useEffect(() => {
+    const { nodes: rawNodes, edges: rawEdges } = buildGraphElements(commits, onCheckout);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = applyDagreLayout(rawNodes, rawEdges);
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+  }, [commits, onCheckout]);
+
   return (
     <div className="stack">
-      <Card title="Commits">
-        <div className="commit-list">
-          {commits.map((c) => (
-            <div
-              key={c.hash}
-              className="commit-item"
-            >
-              <div>
-                <div className="hash-chip">{c.hash.slice(0, 12)}</div>
-                <div className="commit-message">{c.message}</div>
-                <div className="commit-meta">
-                  {c.full_name} ({c.username}) · {c.created_at}
-                </div>
-              </div>
-              <button className="btn btn-primary" onClick={() => onCheckout(c.hash)}>
-                Checkout
-              </button>
-            </div>
-          ))}
-          {commits.length === 0 && (
-            <div className="empty-state">No commits yet.</div>
-          )}
+      <Card title="Commit Graph">
+        <div className="react-flow-wrapper">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView
+          >
+            <Background gap={18} size={1} />
+            <MiniMap pannable zoomable />
+            <Controls />
+          </ReactFlow>
         </div>
+        {commits.length === 0 && <div className="empty-state">No commits yet.</div>}
       </Card>
     </div>
   );
@@ -82,7 +99,8 @@ function DiffViewerView({ commits }) {
   const [h1, setH1] = useState("");
   const [h2, setH2] = useState("");
   const [mode, setMode] = useState("both");
-  const [data, setData] = useState(null);
+  const [diffFile, setDiffFile] = useState(null);
+  const [sqlDiff, setSqlDiff] = useState(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -90,10 +108,32 @@ function DiffViewerView({ commits }) {
     setErr("");
     setLoading(true);
     try {
-      const res = await getDiff(h1, h2);
-      setData(res);
+      const [snapshot1, snapshot2, sqlRes] = await Promise.all([
+        getSnapshot(h1),
+        getSnapshot(h2),
+        getDiff(h1, h2)
+      ]);
+
+      const oldText = snapshotToDDLText(snapshot1);
+      const newText = snapshotToDDLText(snapshot2);
+
+      const file = generateDiffFile(
+        `schema@${h1.slice(0, 12)}`,
+        oldText,
+        `schema@${h2.slice(0, 12)}`,
+        newText,
+        "sql",
+        "sql"
+      );
+      file.init();
+      file.buildSplitDiffLines();
+
+      setDiffFile(file);
+      setSqlDiff(sqlRes);
     } catch (e) {
       setErr(String(e));
+      setDiffFile(null);
+      setSqlDiff(null);
     } finally {
       setLoading(false);
     }
@@ -143,29 +183,41 @@ function DiffViewerView({ commits }) {
         {err && <div className="error-inline">{err}</div>}
       </Card>
 
-      {data && data.warnings?.length > 0 && (
-        <Card title="Warnings">
+      {sqlDiff && sqlDiff.warnings?.length > 0 && (
+        <div className="warning-banner">
           <ul className="warning-list">
-            {data.warnings.map((w, i) => (
+            {sqlDiff.warnings.map((w, i) => (
               <li key={i}>{w}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {diffFile && (
+        <Card title="Visual Diff">
+          <DiffView
+            diffFile={diffFile}
+            diffViewMode={DiffModeEnum.Split}
+          />
         </Card>
       )}
 
-      {data && mode !== "data" && (
-        <Card title="Schema SQL">
+      {sqlDiff && mode !== "data" && (
+        <details className="diff-details">
+          <summary>Schema SQL</summary>
           <pre className="sql-block">
-            {(data.schema_sql ?? []).join("\n") || "(none)"}
+            {(sqlDiff.schema_sql ?? []).join("\n") || "(none)"}
           </pre>
-        </Card>
+        </details>
       )}
-      {data && mode !== "schema" && (
-        <Card title="Data SQL">
+
+      {sqlDiff && mode !== "schema" && (
+        <details className="diff-details">
+          <summary>Data SQL</summary>
           <pre className="sql-block">
-            {(data.data_sql ?? []).join("\n") || "(none)"}
+            {(sqlDiff.data_sql ?? []).join("\n") || "(none)"}
           </pre>
-        </Card>
+        </details>
       )}
     </div>
   );

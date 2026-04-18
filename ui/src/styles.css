@@ -1,4 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+@import "@xyflow/react/dist/style.css";
+@import "@git-diff-view/react/styles/diff-view.css";
 
 @tailwind base;
 @tailwind components;
@@ -180,6 +182,54 @@ body {
   padding: 1rem;
 }
 
+.react-flow-wrapper {
+  height: calc(100vh - 160px);
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.commit-node {
+  width: 280px;
+  border-radius: 0.9rem;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(30, 44, 90, 0.1);
+}
+
+.commit-node.is-head {
+  border-color: var(--accent);
+}
+
+.commit-node-body {
+  padding: 0.7rem 0.8rem 0.2rem;
+}
+
+.commit-node-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.head-badge {
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.commit-node-actions {
+  border-top: 1px solid var(--line);
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .commit-list {
   display: grid;
   gap: 0.7rem;
@@ -288,6 +338,13 @@ body {
   font-size: 0.9rem;
 }
 
+.warning-banner {
+  border: 1px solid #f2d2a0;
+  background: #fff8ed;
+  border-radius: 0.8rem;
+  padding: 0.7rem 0.8rem;
+}
+
 .error-inline {
   color: var(--danger);
   margin-top: 0.65rem;
@@ -386,6 +443,21 @@ body {
   cursor: pointer;
   color: var(--text-soft);
   font-size: 0.74rem;
+}
+
+.diff-details {
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.7rem;
+}
+
+.diff-details summary {
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #31364a;
+  margin-bottom: 0.6rem;
 }
 
 @media (min-width: 768px) {
