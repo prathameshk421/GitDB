@@ -54,7 +54,7 @@ def keyring_username(repo_id: int) -> str:
 
 def get_repo_password(repo_id: int) -> str:
     pw = keyring.get_password(keyring_service(repo_id), keyring_username(repo_id))
-    if not pw:
+    if pw is None:
         raise ConfigError(
             "Database password not found in OS keyring. Re-run `gitdb init`."
         )

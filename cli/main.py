@@ -34,8 +34,25 @@ def _ensure_schema(meta_conn) -> None:
     sql_path = Path("db/schema.sql")
     ddl = sql_path.read_text(encoding="utf-8")
     cur = meta_conn.cursor()
+
+    def repo_head_fk_exists() -> bool:
+        cur.execute(
+            """
+            SELECT 1
+            FROM information_schema.TABLE_CONSTRAINTS
+            WHERE CONSTRAINT_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'repository'
+              AND CONSTRAINT_NAME = 'fk_repo_head'
+            LIMIT 1
+            """
+        )
+        return cur.fetchone() is not None
+
     # naive splitter; schema.sql contains only statement-level DDL
     for stmt in [s.strip() for s in ddl.split(";") if s.strip()]:
+        normalized = " ".join(stmt.split()).lower()
+        if "fk_repo_head" in normalized and repo_head_fk_exists():
+            continue
         cur.execute(stmt)
     meta_conn.commit()
 

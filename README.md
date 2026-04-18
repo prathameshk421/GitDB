@@ -27,6 +27,20 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+## Start Both API + UI
+
+From repo root:
+
+```bash
+./start.sh
+```
+
+This launches:
+- Flask API on `http://127.0.0.1:5000`
+- React UI dev server from `ui/`
+
+Press `Ctrl+C` to stop both processes.
+
 ## Setup (MySQL)
 
 Ensure you can connect to your MySQL server with a user that can create databases

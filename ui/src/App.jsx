@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
+import { flushSync } from "react-dom";
+import { ReactFlow, Background, Controls } from "@xyflow/react";
 import { DiffView, DiffModeEnum } from "@git-diff-view/react";
 import { generateDiffFile } from "@git-diff-view/file";
 import { getCommits, getDiff, getSnapshot, getStatus, postCheckout } from "./api.js";
@@ -7,6 +8,7 @@ import CommitNode from "./components/CommitNode.jsx";
 import { buildGraphElements, applyDagreLayout } from "./components/graphUtils.js";
 
 const nodeTypes = { commitNode: CommitNode };
+const VIEW_TRANSITION_MS = 600;
 
 function snapshotToDDLText(snapshot) {
   return snapshot
@@ -63,6 +65,31 @@ function Card({ title, children }) {
   );
 }
 
+function ThemeIcon({ theme }) {
+  if (theme === "dark") {
+    return (
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2" fill="currentColor" />
+        <path
+          d="M12 1.8V4.3M12 19.7V22.2M4.8 4.8L6.6 6.6M17.4 17.4L19.2 19.2M1.8 12H4.3M19.7 12H22.2M4.8 19.2L6.6 17.4M17.4 6.6L19.2 4.8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        d="M20.4 14.8A8.6 8.6 0 1 1 9.2 3.6a7.1 7.1 0 1 0 11.2 11.2z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function CommitGraphView({ commits, onCheckout }) {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -85,7 +112,6 @@ function CommitGraphView({ commits, onCheckout }) {
             fitView
           >
             <Background gap={18} size={1} />
-            <MiniMap pannable zoomable />
             <Controls />
           </ReactFlow>
         </div>
@@ -349,6 +375,10 @@ export default function App() {
   const [page, setPage] = useState("graph");
   const [commits, setCommits] = useState([]);
   const [err, setErr] = useState("");
+  const [theme, setTheme] = useState(() => {
+    const saved = window.localStorage.getItem("gitdb-theme");
+    return saved === "dark" ? "dark" : "light";
+  });
   const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:5000";
 
   async function refresh() {
@@ -364,6 +394,11 @@ export default function App() {
     refresh();
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem("gitdb-theme", theme);
+  }, [theme]);
+
   async function onCheckout(hash) {
     try {
       await postCheckout(hash);
@@ -372,6 +407,50 @@ export default function App() {
     } catch (e) {
       alert(`Checkout failed: ${String(e)}`);
     }
+  }
+
+  function toggleTheme(event) {
+    const nextTheme = theme === "light" ? "dark" : "light";
+    const x = event.clientX;
+    const y = event.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+    const applyTheme = () => {
+      flushSync(() => {
+        setTheme(nextTheme);
+      });
+    };
+
+    if (!document.startViewTransition) {
+      applyTheme();
+      return;
+    }
+
+    const transition = document.startViewTransition(() => {
+      applyTheme();
+    });
+
+    transition.ready
+      .then(() => {
+        document.documentElement.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${endRadius}px at ${x}px ${y}px)`
+            ]
+          },
+          {
+            duration: VIEW_TRANSITION_MS,
+            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+            pseudoElement: "::view-transition-new(root)"
+          }
+        );
+      })
+      .catch(() => {
+        applyTheme();
+      });
   }
 
   return (
@@ -385,9 +464,19 @@ export default function App() {
               API endpoint: <span className="mono">{API_BASE}</span>
             </div>
           </div>
-          <button className="btn btn-secondary" onClick={refresh}>
-            Refresh
-          </button>
+          <div className="topbar-actions">
+            <button
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+              title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+            >
+              <ThemeIcon theme={theme} />
+            </button>
+            <button className="btn btn-secondary" onClick={refresh}>
+              Refresh
+            </button>
+          </div>
         </div>
         {err && (
           <div className="error-banner">
