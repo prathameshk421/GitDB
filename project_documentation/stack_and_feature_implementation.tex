@@ -1,0 +1,762 @@
+\documentclass[12pt, a4paper]{article}
+
+% -- Packages -----------------------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{setspace}
+\usepackage{mdframed}
+\usepackage{amsmath}
+\tcbuselibrary{skins, breakable}
+
+% -- Colors -------------------------------------------------------------------
+\definecolor{primaryblue}{HTML}{1A73E8}
+\definecolor{darkblue}{HTML}{0D47A1}
+\definecolor{lightgray}{HTML}{F5F5F5}
+\definecolor{codebg}{HTML}{1E1E2E}
+\definecolor{codetext}{HTML}{CDD6F4}
+\definecolor{accent}{HTML}{E53935}
+\definecolor{mysqlorange}{HTML}{E8710A}
+\definecolor{tableheader}{HTML}{1A73E8}
+\definecolor{successgreen}{HTML}{1B8A3E}
+\definecolor{lightgreen}{HTML}{F0FFF4}
+
+% -- Hyperref Setup -----------------------------------------------------------
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    pdftitle={GitDB: Stack and Feature Implementation Guide},
+    pdfauthor={Group Project - DBMS}
+}
+
+% -- Section Formatting --------------------------------------------------------
+\titleformat{\section}
+  {\large\bfseries\color{darkblue}}
+  {\thesection.}{0.5em}{}[\color{primaryblue}\titlerule]
+
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{primaryblue}}
+  {\thesubsection.}{0.5em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{primaryblue!80}}
+  {\thesubsubsection.}{0.5em}{}
+
+\titlespacing*{\section}{0pt}{1.2em}{0.6em}
+\titlespacing*{\subsection}{0pt}{0.8em}{0.4em}
+\titlespacing*{\subsubsection}{0pt}{0.6em}{0.3em}
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{0.5em}
+
+% -- Code Listing Style -------------------------------------------------------
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{codetext},
+    keywordstyle=\color{cyan}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{yellow},
+    breaklines=true,
+    frame=none,
+    xleftmargin=1em,
+    xrightmargin=1em,
+    aboveskip=0.5em,
+    belowskip=0.5em,
+    showstringspaces=false,
+    numbers=none,
+}
+
+% -- Custom Boxes -------------------------------------------------------------
+\tcbset{
+    commandbox/.style={
+        colback=codebg,
+        colframe=primaryblue,
+        coltext=codetext,
+        fonttitle=\bfseries\color{white},
+        attach boxed title to top left={yshift=-2mm, xshift=4mm},
+        boxed title style={colback=primaryblue, colframe=primaryblue},
+        arc=4pt,
+        boxrule=0.8pt,
+        left=6pt, right=6pt, top=8pt, bottom=6pt,
+        breakable
+    },
+    infobox/.style={
+        colback=lightgray,
+        colframe=primaryblue,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    },
+    warningbox/.style={
+        colback=mysqlorange!8,
+        colframe=mysqlorange,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    },
+    fixbox/.style={
+        colback=lightgreen,
+        colframe=successgreen,
+        arc=4pt,
+        boxrule=0.8pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    }
+}
+
+% -- Header / Footer ----------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{\textbf{GitDB}} --- Stack and Features}
+\fancyhead[R]{\small\textcolor{gray}{DBMS Mini Project}}
+\fancyfoot[C]{\small\textcolor{gray}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{primaryblue}\leaders\hrule height \headrulewidth\hfill}}
+
+% -- Document -----------------------------------------------------------------
+\begin{document}
+
+% -- Title Page ---------------------------------------------------------------
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+
+    {\Huge\bfseries\color{darkblue} GitDB}\\[0.4em]
+    {\Large\color{primaryblue} Technology Stack and Feature Implementation Guide}\\[0.2em]
+    {\small\color{mysqlorange}\textit{What is used, what is custom-built, and how it works}}\\[0.2em]
+    {\small\color{gray}\rule{8cm}{0.5pt}}
+
+    \vspace{1.5cm}
+
+    \begin{tcolorbox}[infobox, width=0.88\textwidth]
+        \centering
+        {\normalsize\textit{This document explains the full GitDB project implementation from source code:\\
+        backend stack, frontend stack, database design, all major features, and\\
+        whether each feature is implemented through external packages or custom Python/JavaScript code.}}
+    \end{tcolorbox}
+
+    \vspace{1.5cm}
+
+    {\large\textbf{Institution:} PICT, Pune}\\[0.5em]
+    {\large\textbf{Subject:} DISL}\\[0.5em]
+    {\large\textbf{Project Type:} Mini Project}\\[0.5em]
+    {\large\textbf{Class:} SY-11 \quad|\quad \textbf{Lab Batch:} F-11}\\[0.5em]
+    {\large\textbf{Group Size:} 4 Members}\\[1em]
+
+    \vspace{0.5cm}
+
+    \textbf{Team Members:}\\
+    \vspace{0.5em}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{>{\centering\arraybackslash}p{1cm} >{\arraybackslash}p{5cm} >{\centering\arraybackslash}p{2.5cm}}
+    \toprule
+    \textbf{Sr.} & \textbf{Name} & \textbf{Roll No.} \\
+    \midrule
+    1 & Aditya Malode     & 23325 \\
+    2 & Rohan Natekar     & 23330 \\
+    3 & Aarush Oak        & 23332 \\
+    4 & Prathamesh Kinagi & 23340 \\
+    \bottomrule
+    \end{tabular}
+
+    \vspace{2.5cm}
+    {\small\color{gray} Academic Year 2025--26}
+    \vfill
+    {\small\color{gray} Compiled on \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Project Summary}
+
+GitDB is a Git-like version control system for MySQL databases. It tracks full
+\textbf{state snapshots} (schema plus data) instead of migration instructions.
+Each commit stores a full snapshot inside \texttt{gitdb\_meta}, computes a
+SHA-256 commit hash, and links to a parent hash to form a linear Merkle chain.
+
+The project is implemented as a full-stack system:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Core engine (Python):} snapshotting, hashing, diffing, checkout
+    \item \textbf{CLI (Python):} user-facing commands similar to Git
+    \item \textbf{REST API (Flask):} UI-friendly endpoints
+    \item \textbf{Frontend (React + Vite):} commit graph, diff viewer, schema browser
+    \item \textbf{Metadata DB (MySQL \texttt{gitdb\_meta}):} persistent versioning objects
+    \item \textbf{Automated tests (pytest):} unit plus integration validation
+\end{itemize}
+
+\begin{tcolorbox}[infobox]
+\textbf{Design principle:} keep the version-control layer separate from the target
+application database. GitDB metadata is stored in a dedicated \texttt{gitdb\_meta}
+database, similar to how Git stores metadata in a dedicated \texttt{.git/} directory.
+\end{tcolorbox}
+
+\section{Technology Stack}
+
+\subsection{Backend and Database Stack}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{}>{\bfseries}p{2.7cm} >{\ttfamily}p{3.3cm} p{9.3cm}@{}}
+\toprule
+Layer & Technology & Purpose \\
+\midrule
+Language & Python 3.10+ & Primary implementation language for engine, CLI, and API \\
+Database driver & mysql-connector-python & Connect to MySQL and execute SQL \\
+SQL parser & sqlglot & Parse \texttt{CREATE TABLE} DDL into AST for structural schema diffing \\
+CLI framework & click & Command definitions, options, arguments, command groups \\
+CLI rendering & rich & Colored tables, panels, and readable terminal output \\
+Web API & flask + flask-cors & REST service and browser-safe cross-origin access \\
+Password hashing & argon2-cffi & Secure hash for GitDB user passwords \\
+Secret storage & keyring & Store target DB passwords in OS keychain instead of plaintext config \\
+Cryptography & hashlib (standard library) & SHA-256 commit hash generation \\
+Testing & pytest & Unit and integration test framework \\
+\bottomrule
+\end{longtable}
+
+\subsection{Frontend Stack}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{}>{\bfseries}p{2.7cm} >{\ttfamily}p{3.3cm} p{9.3cm}@{}}
+\toprule
+Layer & Technology & Purpose \\
+\midrule
+UI runtime & React 18 & Component-based frontend \\
+Build tool & Vite 5 & Fast development server and production build pipeline \\
+Styling & Tailwind CSS 4 + custom CSS variables & Utility-first styling plus custom themed design system \\
+Commit graph & @xyflow/react + dagre & Interactive graph nodes/edges plus automatic layout \\
+Visual diff & @git-diff-view/react + @git-diff-view/file & Side-by-side schema diff rendering \\
+Browser API client & fetch (custom wrapper) & API requests to Flask endpoints \\
+\bottomrule
+\end{longtable}
+
+\subsection{Persistence Model}
+
+GitDB metadata database schema is implemented in \texttt{db/schema.sql} using
+four core entities:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{user}: authentication and commit authorship
+    \item \texttt{repository}: target DB config and current HEAD hash
+    \item \texttt{commits}: linear commit chain with parent references
+    \item \texttt{snapshots}: per-table serialized schema and row data
+\end{itemize}
+
+\section{Codebase Structure and Responsibilities}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{3.3cm} X}
+\toprule
+Path & Responsibility \\
+\midrule
+engine/snapshot.py & Capture schema and row snapshots from target MySQL DB \\
+engine/hash.py & Deterministic commit hash computation \\
+engine/diff.py & Schema and data diff generation as SQL patch statements \\
+engine/checkout.py & Two-phase checkout executor with recovery logic \\
+engine/db.py & Config loading, keyring access, target/meta DB connection helpers \\
+engine/errors.py & Shared custom exception types \\
+cli/main.py & All CLI commands: register/init/commit/log/diff/checkout/status \\
+api/app.py & REST endpoints for commits/diff/snapshot/checkout/status \\
+ui/src/App.jsx & Main UI shell and page orchestration \\
+ui/src/components/*.jsx,*.js & Commit node rendering and graph layout logic \\
+tests/unit & Fast isolated unit tests with mocks \\
+tests/integration & Real MySQL integration scenarios \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{GitDB Data Structures}
+
+This section describes the core data structures used internally by GitDB.
+These structures are the implementation backbone of commit creation, diff
+generation, and checkout execution.
+
+\subsection{SQL Metadata Database Structure (\texttt{gitdb\_meta})}
+
+GitDB stores all version-control metadata in a dedicated MySQL database named
+\texttt{gitdb\_meta}. This is the primary database-side data structure of the
+system, and it is defined in \texttt{db/schema.sql}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{2.7cm} >{\ttfamily}p{4.0cm} X}
+\toprule
+Table & Key fields & Role in GitDB \\
+\midrule
+user & \texttt{user\_id} (PK), \texttt{username} (UNIQUE), \texttt{email} (UNIQUE) & Stores GitDB login identity and commit authorship metadata \\
+repository & \texttt{repo\_id} (PK), \texttt{user\_id} (FK), \texttt{current\_hash} (FK) & Stores target DB connection metadata and HEAD pointer \\
+commits & \texttt{hash} (PK), \texttt{repo\_id} (FK), \texttt{parent\_hash} (self-FK, UNIQUE) & Stores linear commit chain and commit message/timestamp/author \\
+snapshots & \texttt{id} (PK), \texttt{commit\_hash} (FK), \texttt{(commit\_hash, table\_name)} (UNIQUE) & Stores per-table schema/data snapshot payload for each commit \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{tcolorbox}[infobox]
+\textbf{Key design point:}
+\texttt{repository.current\_hash} acts as the HEAD reference, and
+\texttt{commits.parent\_hash} creates a strict linear history structure.
+\end{tcolorbox}
+
+\begin{tcolorbox}[commandbox, title=Relationship Structure (Conceptual)]
+\begin{lstlisting}
+user (1) -------- (N) repository (1) -------- (N) commits (1) -------- (N) snapshots
+                           |                        |
+                           |                        +-- parent_hash -> commits.hash (self link)
+                           +-- current_hash -> commits.hash (HEAD pointer)
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{In-Memory Core Structures (Python)}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.0cm} >{\ttfamily}p{3.1cm} X}
+\toprule
+Structure & Declared in & Purpose \\
+\midrule
+TableSnapshot & engine/snapshot.py & Represents one table state: DDL, rows, row count, and PK metadata \\
+RepoConfig & engine/db.py & Runtime repository connection model loaded from \texttt{.gitdb/config.json} \\
+DiffResult & engine/diff.py & Holds generated schema SQL, data SQL, and warning messages \\
+Snapshot map & engine/snapshot.py & Dictionary \texttt{dict[str, TableSnapshot]} for full database state at one commit \\
+PK index maps & engine/diff.py & Row lookup maps keyed by PK tuple for efficient row-level diff \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{tcolorbox}[commandbox, title=Key Python Data Structures (Conceptual Form)]
+\begin{lstlisting}
+TableSnapshot:
+    table_name: str
+    ddl_json: dict
+    rows_json: list[dict]
+    row_count: int
+    pk_columns: list[str]
+
+RepoConfig:
+    repo_id: int
+    host: str
+    port: int
+    db_user: str
+    db_name: str
+
+DiffResult:
+    schema_sql: list[str]
+    data_sql: list[str]
+    warnings: list[str]
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Commit History Data Structure}
+
+GitDB commit history is a \textbf{linear linked structure} (no branching).
+At persistence level, this is represented by:
+\begin{itemize}[leftmargin=1.5em]
+        \item \texttt{commits.hash}: node identity
+        \item \texttt{commits.parent\_hash}: pointer to previous node
+        \item \texttt{repository.current\_hash}: HEAD pointer to latest checked-out node
+        \item unique \texttt{parent\_hash}: ensures at most one child per commit in this design
+\end{itemize}
+
+\begin{tcolorbox}[infobox]
+Conceptually, this behaves like a singly linked list with cryptographic node IDs:
+HEAD $\rightarrow C_n \rightarrow C_{n-1} \rightarrow \dots \rightarrow C_0$.
+\end{tcolorbox}
+
+\subsection{Snapshot Storage Structure}
+
+Each commit stores a full database snapshot as a set of per-table records.
+The persistence pattern is:
+\begin{itemize}[leftmargin=1.5em]
+        \item one row in \texttt{commits}
+        \item many rows in \texttt{snapshots} (exactly one per table name)
+        \item \texttt{ddl\_json} stores schema metadata and raw DDL
+        \item \texttt{rows\_json} stores deterministic row arrays ordered by PK columns
+\end{itemize}
+
+\begin{tcolorbox}[commandbox, title=Snapshot Container Structure]
+\begin{lstlisting}
+snapshot: dict[str, TableSnapshot] = {
+    "users": TableSnapshot(...),
+    "orders": TableSnapshot(...),
+    "payments": TableSnapshot(...),
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Diff Engine Working Structures}
+
+During diff generation, GitDB transforms row arrays into hash-map style indexes
+to support efficient set operations:
+\begin{itemize}[leftmargin=1.5em]
+        \item \texttt{old\_idx = \{pk\_tuple(row): row\}} and \texttt{new\_idx = \{pk\_tuple(row): row\}}
+        \item \texttt{added = new\_keys - old\_keys}
+        \item \texttt{removed = old\_keys - new\_keys}
+        \item \texttt{common = old\_keys \& new\_keys}
+\end{itemize}
+
+These structures drive deterministic emission of \texttt{INSERT},
+\texttt{DELETE}, and \texttt{UPDATE} SQL statements.
+
+\subsection{API Payload Structures}
+
+GitDB API responses follow stable JSON object/array structures, for example:
+\begin{itemize}[leftmargin=1.5em]
+        \item \texttt{/commits}: list of commit objects with hash, parent, message, timestamp, author
+        \item \texttt{/diff}: object with \texttt{schema\_sql}, \texttt{data\_sql}, \texttt{warnings}
+        \item \texttt{/snapshot}: list of table snapshot summaries (table name, row count, ddl)
+        \item \texttt{/status}: object with table additions/deletions/modifications and row deltas
+\end{itemize}
+
+\begin{tcolorbox}[fixbox]
+\textbf{Why this matters:}
+Clearly defined data structures make GitDB testable and maintainable. Most unit
+tests directly validate behavior of these structures (hash determinism, snapshot
+shape, diff SQL generation, checkout state transitions, and API contract shape).
+\end{tcolorbox}
+
+\section{Feature-Wise Implementation Mapping}
+
+\subsection{Quick Mapping Table}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.0cm} >{\bfseries}p{3.2cm} >{\bfseries}p{3.2cm} X}
+\toprule
+Feature & Package-assisted part & Custom code part & Main implementation \\
+\midrule
+User registration & \texttt{argon2-cffi} & Validation and DB insert flow & \texttt{cli/main.py} \\
+Repo init and config & \texttt{click}, \texttt{keyring} & Metadata setup and config file writing & \texttt{cli/main.py}, \texttt{engine/db.py} \\
+Snapshot capture & \texttt{mysql-connector-python} & Introspection, PK handling, row-limit guard & \texttt{engine/snapshot.py} \\
+Commit identity & \texttt{hashlib} & Payload construction and deterministic serialization path & \texttt{engine/hash.py} \\
+Schema diff & \texttt{sqlglot} AST parser & Added/removed/changed column SQL generation & \texttt{engine/diff.py} \\
+Data diff & None (algorithm is custom) & PK-indexed \texttt{INSERT}/\texttt{UPDATE}/\texttt{DELETE} generation & \texttt{engine/diff.py} \\
+Checkout safety & MySQL transaction primitives & Two-phase execution, rollback, recovery file path & \texttt{engine/checkout.py} \\
+CLI UX & \texttt{click}, \texttt{rich} & Command semantics and orchestration & \texttt{cli/main.py} \\
+REST API & \texttt{flask}, \texttt{flask-cors} & Endpoint logic and JSON formatting & \texttt{api/app.py} \\
+UI graph and diff & \texttt{@xyflow/react}, \texttt{dagre}, \texttt{@git-diff-view/react} & App flow, API integration, page state & \texttt{ui/src/App.jsx} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Feature 1: User Registration and Authentication Metadata}
+
+\textbf{What it does:}
+Creates GitDB users in \texttt{gitdb\_meta.user} and stores secure password hashes.
+
+\textbf{How it is implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Custom CLI flow in \texttt{register} command (inputs, DB setup, insert)
+    \item Password hashing delegated to \texttt{argon2-cffi}
+    \item User lookup by username used later for commit authorship
+\end{itemize}
+
+\textbf{Why package is used:}
+Argon2 is a secure password hashing standard. Writing this manually is unsafe,
+so a proven cryptographic package is used.
+
+\subsection{Feature 2: Repository Initialization and Secure Credential Handling}
+
+\textbf{What it does:}
+Initializes metadata for one target DB, stores non-secret config in
+\texttt{.gitdb/config.json}, and stores the real DB password in OS keyring.
+
+\textbf{How it is implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Custom init command creates \texttt{repository} row and writes config file
+    \item \texttt{engine/db.py} provides \texttt{load\_repo\_config()} and connection helpers
+    \item \texttt{keyring.set\_password()} and \texttt{get\_password()} provide secret storage
+\end{itemize}
+
+\textbf{Implementation ownership:}
+Control flow and repository metadata management are custom Python code. Secret vault
+behavior is delegated to the OS keyring package.
+
+\subsection{Feature 3: Snapshot Capture (Schema + Data)}
+
+\textbf{What it does:}
+Captures the full table-level state of the target DB for each commit.
+
+\textbf{How it is implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Queries \texttt{information\_schema.TABLES} for base table list
+    \item Queries \texttt{information\_schema.COLUMNS} and \texttt{SHOW CREATE TABLE}
+    \item Detects primary-key columns via \texttt{information\_schema.KEY\_COLUMN\_USAGE}
+    \item Reads rows using \texttt{SELECT * ORDER BY <pk columns>} for deterministic ordering
+    \item Enforces hard guard \texttt{row\_limit = 10000} per table
+    \item For no-PK tables: captures DDL but skips row data diff payload
+\end{itemize}
+
+\textbf{Package vs custom:}
+Database access is package-driven (MySQL connector), but snapshot data model,
+introspection sequence, row-limit policy, and no-PK behavior are custom logic.
+
+\subsection{Feature 4: Commit Hashing and Linear Merkle Chain}
+
+\textbf{What it does:}
+Computes immutable commit identifiers and links each commit to a parent.
+
+\textbf{How it is implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{snapshot\_to\_json()} performs deterministic JSON serialization
+    \item Commit payload is \texttt{serialized\_snapshot || parent\_hash}
+    \item SHA-256 hash generated using \texttt{hashlib.sha256(...).hexdigest()}
+    \item Parent linkage stored in \texttt{commits.parent\_hash}
+    \item Linear-chain constraint enforced by unique key on \texttt{parent\_hash}
+\end{itemize}
+
+\textbf{Mathematical form:}
+\[
+H_i = \mathrm{SHA256}(S_i \Vert H_{i-1})
+\]
+where $S_i$ is snapshot serialization and $H_{i-1}$ is parent hash.
+
+\subsection{Feature 5: Schema Diff Engine}
+
+\textbf{What it does:}
+Generates DDL SQL patch statements between two snapshots.
+
+\textbf{How it is implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Uses \texttt{sqlglot} to parse \texttt{CREATE TABLE} DDL into AST
+    \item Extracts column definitions from \texttt{ColumnDef} nodes
+    \item Computes column set delta: added, removed, changed
+    \item Emits:\\
+    \texttt{ADD COLUMN}, \texttt{DROP COLUMN}, \texttt{MODIFY COLUMN}
+    \item Emits table-level \texttt{CREATE TABLE} and \texttt{DROP TABLE} where needed
+    \item Orders schema SQL with create/alter first, drop last
+\end{itemize}
+
+\textbf{Package vs custom:}
+AST parsing is package-provided; actual comparison policy and SQL statement
+emission strategy are custom implementation.
+
+\subsection{Feature 6: Data Diff Engine}
+
+\textbf{What it does:}
+Generates DML SQL statements to transform rows from old snapshot to new snapshot.
+
+\textbf{How it is implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Uses PK tuple as stable row identity key
+    \item Builds hash maps of old/new rows indexed by PK tuple
+    \item Computes three disjoint sets: added, removed, common
+    \item Emits \texttt{INSERT} for added rows
+    \item Emits \texttt{DELETE} for removed rows
+    \item Emits \texttt{UPDATE} only when non-PK values changed
+    \item Handles NULL, boolean, numeric, and escaped string literals
+\end{itemize}
+
+\textbf{Complexity insight:}
+Using map indexing by PK gives approximately linear behavior in number of rows
+for each table (average-case $O(n)$ operations for lookup/delta generation).
+
+\textbf{Package vs custom:}
+This is fully custom algorithmic code in \texttt{engine/diff.py}.
+
+\subsection{Feature 7: Two-Phase Checkout with Recovery}
+
+\textbf{What it does:}
+Safely checks out a target commit into live DB state while handling MySQL DDL
+implicit commit behavior.
+
+\textbf{How it is implemented:}
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Phase 1 (schema):} execute DDL statements one by one
+    \item On schema failure: attempt schema restoration from old snapshot and write
+    recovery SQL file to \texttt{.gitdb/recovery\_timestamp.sql}
+    \item \textbf{Phase 2 (data):} start transaction, disable FK checks, apply DML,
+    re-enable FK checks, commit
+    \item On data failure: rollback transaction and raise checkout data error
+\end{enumerate}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Important MySQL behavior:} many DDL operations auto-commit, so they cannot be
+rolled back like normal DML. This is why the schema phase and data phase are
+separated in GitDB.
+\end{tcolorbox}
+
+\subsection{Feature 8: Status Computation}
+
+\textbf{What it does:}
+Compares live database state against HEAD snapshot and reports:
+\begin{itemize}[leftmargin=1.5em]
+    \item added tables
+    \item dropped tables
+    \item modified tables (raw DDL changed)
+    \item row count deltas per common table
+\end{itemize}
+
+\textbf{How it is implemented:}
+Custom comparison logic in both CLI and API layers using snapshots from live DB
+and current HEAD hash.
+
+\subsection{Feature 9: Command Line Interface}
+
+\textbf{Commands implemented:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{gitdb register}
+    \item \texttt{gitdb init}
+    \item \texttt{gitdb commit}
+    \item \texttt{gitdb log} (with \texttt{--oneline} and \texttt{--graph})
+    \item \texttt{gitdb diff}
+    \item \texttt{gitdb checkout}
+    \item \texttt{gitdb status}
+\end{itemize}
+
+\textbf{Package vs custom:}
+\texttt{click} handles parsing and command registration; \texttt{rich} handles
+visual formatting; business behavior is custom orchestration code.
+
+\subsection{Feature 10: REST API for UI Integration}
+
+\textbf{Endpoints:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{GET /commits}
+    \item \texttt{GET /diff/<hash1>/<hash2>}
+    \item \texttt{POST /diff/<hash1>/<hash2>}
+    \item \texttt{GET /snapshot/<commit\_hash>}
+    \item \texttt{POST /checkout/<commit\_hash>}
+    \item \texttt{GET /status}
+\end{itemize}
+
+\textbf{How implemented:}
+Flask routes in \texttt{api/app.py} call engine modules, serialize response payloads,
+and return JSON consumable by React UI.
+
+\subsection{Feature 11: Web Interface}
+
+\textbf{Main UI pages:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Commit Graph page
+    \item Diff Viewer page
+    \item Schema Browser page
+\end{itemize}
+
+\textbf{Implementation split:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Custom page and state orchestration in \texttt{ui/src/App.jsx}
+    \item Graph rendering via \texttt{@xyflow/react}
+    \item Automatic node layout via \texttt{dagre}
+    \item Visual split diff via \texttt{@git-diff-view/react}
+    \item API access through custom wrappers in \texttt{ui/src/api.js}
+    \item Theme system and responsive styling through custom CSS variables and Tailwind
+\end{itemize}
+
+\subsection{Feature 12: Automated Testing Strategy}
+
+\textbf{Unit tests:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{test\_hash.py}: deterministic hash and Merkle-chain behavior
+    \item \texttt{test\_snapshot.py}: snapshot behavior, row-limit guard, no-PK handling
+    \item \texttt{test\_diff.py}: schema and data SQL generation
+    \item \texttt{test\_checkout.py}: two-phase checkout success/failure paths
+    \item \texttt{test\_api.py}: Flask endpoint behavior with monkeypatched DB calls
+\end{itemize}
+
+\textbf{Integration tests (live MySQL):}
+\begin{itemize}[leftmargin=1.5em]
+    \item full round-trip checkout restoration
+    \item row-limit error path
+    \item schema-only restoration behavior
+    \item no-PK table behavior
+    \item foreign-key-sensitive checkout flow
+\end{itemize}
+
+\section{Data and Control Flow Across Layers}
+
+\subsection{Commit Flow}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item User runs \texttt{gitdb commit -m ... --author ...}
+    \item CLI loads repo config and credentials via keyring
+    \item Snapshot engine captures target DB state
+    \item Hash engine computes commit hash from snapshot plus parent hash
+    \item CLI writes commit row and per-table snapshot rows into \texttt{gitdb\_meta}
+    \item Repository \texttt{current\_hash} (HEAD) is updated to new hash
+\end{enumerate}
+
+\subsection{Checkout Flow}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item User selects target commit (CLI command or UI button via API)
+    \item Engine loads old (HEAD) and new snapshots
+    \item Diff engine builds schema and data SQL patches
+    \item Checkout engine executes schema phase, then transactional data phase
+    \item On success, HEAD pointer is updated
+\end{enumerate}
+
+\section{What is Built In-House vs Outsourced to Libraries}
+
+\subsection{Primarily In-House (Custom Engineering)}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item snapshot model and capture orchestration
+    \item commit hash payload design and chain semantics
+    \item schema-delta and data-delta generation policies
+    \item two-phase checkout safety model
+    \item CLI command semantics and user workflows
+    \item REST payload design for UI consumption
+    \item UI page structure and interaction flow
+\end{itemize}
+
+\subsection{Library-Assisted (Infrastructure Building Blocks)}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item DB connectivity: \texttt{mysql-connector-python}
+    \item DDL parser: \texttt{sqlglot}
+    \item secure password hashing: \texttt{argon2-cffi}
+    \item secret storage: \texttt{keyring}
+    \item CLI framework and formatting: \texttt{click}, \texttt{rich}
+    \item API framework: \texttt{flask}, \texttt{flask-cors}
+    \item graph/diff frontend widgets: \texttt{@xyflow/react}, \texttt{dagre}, \texttt{@git-diff-view/react}
+\end{itemize}
+
+\begin{tcolorbox}[fixbox]
+\textbf{Engineering takeaway:}
+GitDB is not a wrapper around one ready-made version-control package. Instead, it
+combines multiple focused libraries while implementing the core database-versioning
+algorithms and workflows as original project code.
+\end{tcolorbox}
+
+\section{Current Constraints and Known Limits}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item project enforces linear history (no branching support)
+    \item row snapshot guard defaults to 10,000 rows per table
+    \item tables without primary keys are captured but skipped in row-level diffing
+    \item schema rename inference is not semantic; altered definitions can be warned and
+    represented through \texttt{MODIFY COLUMN}
+    \item recovery file is best-effort schema escape hatch for manual intervention
+\end{itemize}
+
+\section{Conclusion}
+
+GitDB uses a layered full-stack architecture and balances reliability with project
+scope. The stack selection is pragmatic: mature libraries are used for parsing,
+crypto, UI widgets, and connectivity, while the core value of the project
+(snapshotting, diff generation, and safe checkout workflow) is implemented through
+custom code in the engine layer.
+
+From an academic and engineering perspective, the project demonstrates:
+\begin{itemize}[leftmargin=1.5em]
+    \item database introspection and metadata modeling
+    \item deterministic state serialization and cryptographic identity
+    \item SQL patch generation from structural and row-level deltas
+    \item safe execution strategy around MySQL DDL transaction limitations
+    \item end-to-end productization via CLI, API, UI, and automated tests
+\end{itemize}
+
+\end{document}
