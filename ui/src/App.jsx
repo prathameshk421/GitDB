@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { ReactFlow, Background, Controls } from "@xyflow/react";
 import { DiffView, DiffModeEnum } from "@git-diff-view/react";
 import { generateDiffFile } from "@git-diff-view/file";
-import { getCommits, getDiff, getSnapshot, getStatus, postCheckout } from "./api.js";
+import { getCommits, getDiff, getSnapshot, getStatus, postCheckout, login, logout, getSession, getRepositories } from "./api.js";
 import CommitNode from "./components/CommitNode.jsx";
 import { buildGraphElements, applyDagreLayout } from "./components/graphUtils.js";
 
@@ -379,7 +379,38 @@ export default function App() {
     const saved = window.localStorage.getItem("gitdb-theme");
     return saved === "dark" ? "dark" : "light";
   });
+  const [user, setUser] = useState(null);
+  const [repos, setRepos] = useState([]);
+  const [repoId, setRepoId] = useState(null);
+  const [loginState, setLoginState] = useState({ username: "", password: "", error: "" });
   const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:5000";
+
+  // Session check on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const session = await getSession();
+        if (session.user) {
+          setUser(session.user);
+          const repoList = await getRepositories();
+          setRepos(repoList);
+          if (repoList.length > 0) setRepoId(repoList[0].repo_id);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Repo change triggers commit refresh
+  useEffect(() => {
+    if (!repoId) return;
+    refresh();
+    // eslint-disable-next-line
+  }, [repoId]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem("gitdb-theme", theme);
+  }, [theme]);
 
   async function refresh() {
     setErr("");
@@ -390,14 +421,27 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  async function handleLogin(e) {
+    e.preventDefault();
+    setLoginState((s) => ({ ...s, error: "" }));
+    try {
+      const res = await login(loginState.username, loginState.password);
+      setUser(res.user);
+      const repoList = await getRepositories();
+      setRepos(repoList);
+      setRepoId(repoList.length > 0 ? repoList[0].repo_id : null);
+    } catch (e) {
+      setLoginState((s) => ({ ...s, error: e.message.replace(/^Error: /, "") }));
+    }
+  }
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("gitdb-theme", theme);
-  }, [theme]);
+  async function handleLogout() {
+    await logout();
+    setUser(null);
+    setRepos([]);
+    setRepoId(null);
+    setCommits([]);
+  }
 
   async function onCheckout(hash) {
     try {
@@ -453,6 +497,55 @@ export default function App() {
       });
   }
 
+  // Login form if not logged in
+  if (!user) {
+    return (
+      <div className="login-shell">
+        <form className="login-form" onSubmit={handleLogin}>
+          <h2>Login to GitDB</h2>
+          <input
+            className="field"
+            type="text"
+            placeholder="Username"
+            value={loginState.username}
+            onChange={e => setLoginState(s => ({ ...s, username: e.target.value }))}
+            autoFocus
+            required
+          />
+          <input
+            className="field"
+            type="password"
+            placeholder="Password"
+            value={loginState.password}
+            onChange={e => setLoginState(s => ({ ...s, password: e.target.value }))}
+            required
+          />
+          <button className="btn btn-primary" type="submit">Login</button>
+          {loginState.error && <div className="error-inline">{loginState.error}</div>}
+        </form>
+      </div>
+    );
+  }
+
+  // Repo selector if multiple repos
+  const repoSelector = (
+    <div className="repo-selector">
+      <label htmlFor="repo-select">Repository:</label>
+      <select
+        id="repo-select"
+        className="field"
+        value={repoId || ""}
+        onChange={e => setRepoId(Number(e.target.value))}
+      >
+        {repos.map(r => (
+          <option key={r.repo_id} value={r.repo_id}>
+            {r.repo_name} ({r.db_name}@{r.db_host}:{r.db_port})
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
   return (
     <div className="app-shell">
       <Sidebar page={page} setPage={setPage} />
@@ -463,8 +556,13 @@ export default function App() {
             <div className="topbar-subtitle">
               API endpoint: <span className="mono">{API_BASE}</span>
             </div>
+            {repos.length > 1 && repoSelector}
           </div>
           <div className="topbar-actions">
+            <span className="user-info">{user.username}</span>
+            <button className="btn btn-secondary" onClick={handleLogout}>
+              Logout
+            </button>
             <button
               className="theme-toggle"
               onClick={toggleTheme}

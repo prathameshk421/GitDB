@@ -1,17 +1,68 @@
 from __future__ import annotations
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 
 from engine.db import load_repo_config, connect_meta_db, connect_target_db
+import mysql.connector
+from argon2 import PasswordHasher
 from engine.diff import diff_snapshots, load_snapshot_from_row
 from engine.checkout import apply_checkout
 from engine.snapshot import capture_snapshot
 
 
+
 def create_app() -> Flask:
     app = Flask(__name__)
-    CORS(app)
+    app.secret_key = "gitdb-very-secret-key"  # TODO: use env var in prod
+    CORS(app, supports_credentials=True)
+    ph = PasswordHasher()
+
+    def get_db():
+        # Use config for now; in future, use per-user DB config
+        return connect_meta_db(load_repo_config())
+
+    @app.post("/login")
+    def login():
+        data = request.json
+        username = data.get("username")
+        password = data.get("password")
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT user_id, password_hash, is_active, full_name, email FROM user WHERE username = %s", (username,))
+        row = cur.fetchone()
+        if not row or not row[2]:
+            return jsonify({"error": "Invalid username or inactive user"}), 401
+        try:
+            ph.verify(row[1], password)
+        except Exception:
+            return jsonify({"error": "Invalid password"}), 401
+        session["user_id"] = row[0]
+        session["username"] = username
+        return jsonify({"ok": True, "user": {"user_id": row[0], "username": username, "full_name": row[3], "email": row[4]}})
+
+    @app.post("/logout")
+    def logout():
+        session.clear()
+        return jsonify({"ok": True})
+
+    @app.get("/me")
+    def me():
+        if "user_id" not in session:
+            return jsonify({"user": None}), 401
+        return jsonify({"user": {"user_id": session["user_id"], "username": session["username"]}})
+
+    @app.get("/repositories")
+    def repositories():
+        if "user_id" not in session:
+            return jsonify({"error": "Not authenticated"}), 401
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT repo_id, repo_name, target_db_name, db_host, db_port FROM repository WHERE user_id = %s", (session["user_id"],))
+        repos = [
+            {"repo_id": r[0], "repo_name": r[1], "db_name": r[2], "db_host": r[3], "db_port": r[4]} for r in cur.fetchall()
+        ]
+        return jsonify(repos)
 
     @app.get("/commits")
     def commits():
