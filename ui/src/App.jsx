@@ -21,9 +21,9 @@ function snapshotToDDLText(snapshot) {
 
 function Sidebar({ page, setPage }) {
   const items = [
-    { id: "graph", label: "Commit Graph" },
-    { id: "diff", label: "Diff Viewer" },
-    { id: "schema", label: "Schema Browser" }
+    { id: "graph", label: "Graph", icon: "◎", shortcut: "1" },
+    { id: "diff", label: "Diff", icon: "⇵", shortcut: "2" },
+    { id: "schema", label: "Schema", icon: "≋", shortcut: "3" }
   ];
   return (
     <aside className="app-sidebar">
@@ -33,10 +33,10 @@ function Sidebar({ page, setPage }) {
         </div>
         <div>
           <div className="brand-name">GitDB</div>
-          <div className="brand-subtitle">Versioned SQL snapshots</div>
+          <div className="brand-subtitle">Version Control</div>
         </div>
       </div>
-      <div className="nav-list">
+      <nav className="nav-list">
         {items.map((it) => (
           <button
             key={it.id}
@@ -44,13 +44,16 @@ function Sidebar({ page, setPage }) {
               page === it.id ? "nav-button-active" : "nav-button-idle"
             }`}
             onClick={() => setPage(it.id)}
+            title={`${it.label} (press ${it.shortcut})`}
           >
-            {it.label}
+            <span className="nav-icon">{it.icon}</span>
+            <span>{it.label}</span>
+            <kbd className="nav-shortcut">{it.shortcut}</kbd>
           </button>
         ))}
-      </div>
+      </nav>
       <div className="sidebar-footnote">
-        Keep API integration stable while iterating on schema history.
+        <kbd>⌘R</kbd> Refresh · <kbd>T</kbd> Toggle theme
       </div>
     </aside>
   );
@@ -129,6 +132,7 @@ function DiffViewerView({ commits }) {
   const [sqlDiff, setSqlDiff] = useState(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSql, setShowSql] = useState({ schema: true, data: true });
 
   async function run() {
     setErr("");
@@ -165,45 +169,60 @@ function DiffViewerView({ commits }) {
     }
   }
 
+  const swapCommits = () => {
+    const temp = h1;
+    setH1(h2);
+    setH2(temp);
+  };
+
   return (
     <div className="stack">
       <Card title="Select commits">
-        <div className="form-grid">
+        <div className="diff-select-grid">
+          <div className="diff-select-box">
+            <label className="diff-select-label">From</label>
+            <select
+              className="field"
+              value={h1}
+              onChange={(e) => setH1(e.target.value)}
+            >
+              <option value="">Select commit…</option>
+              {commits.map((c) => (
+                <option key={c.hash} value={c.hash}>
+                  {c.hash.slice(0, 12)} — {c.message}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button className="btn btn-ghost swap-btn" onClick={swapCommits} title="Swap commits">
+            ⇄
+          </button>
+          <div className="diff-select-box">
+            <label className="diff-select-label">To</label>
+            <select
+              className="field"
+              value={h2}
+              onChange={(e) => setH2(e.target.value)}
+            >
+              <option value="">Select commit…</option>
+              {commits.map((c) => (
+                <option key={c.hash} value={c.hash}>
+                  {c.hash.slice(0, 12)} — {c.message}
+                </option>
+              ))}
+            </select>
+          </div>
           <select
-            className="field"
-            value={h1}
-            onChange={(e) => setH1(e.target.value)}
-          >
-            <option value="">hash1…</option>
-            {commits.map((c) => (
-              <option key={c.hash} value={c.hash}>
-                {c.hash.slice(0, 12)} — {c.message}
-              </option>
-            ))}
-          </select>
-          <select
-            className="field"
-            value={h2}
-            onChange={(e) => setH2(e.target.value)}
-          >
-            <option value="">hash2…</option>
-            {commits.map((c) => (
-              <option key={c.hash} value={c.hash}>
-                {c.hash.slice(0, 12)} — {c.message}
-              </option>
-            ))}
-          </select>
-          <select
-            className="field"
+            className="field mode-select"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-            <option value="both">Both</option>
-            <option value="schema">Schema only</option>
-            <option value="data">Data only</option>
+            <option value="both">All</option>
+            <option value="schema">Schema</option>
+            <option value="data">Data</option>
           </select>
           <button className="btn btn-primary" onClick={run} disabled={!h1 || !h2 || loading}>
-            {loading ? "Loading…" : "Diff"}
+            {loading ? <span className="loading-spinner"></span> : "Compare"}
           </button>
         </div>
         {err && <div className="error-inline">{err}</div>}
@@ -211,16 +230,14 @@ function DiffViewerView({ commits }) {
 
       {sqlDiff && sqlDiff.warnings?.length > 0 && (
         <div className="warning-banner">
-          <ul className="warning-list">
-            {sqlDiff.warnings.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
+          {sqlDiff.warnings.map((w, i) => (
+            <span key={i}>{w}</span>
+          ))}
         </div>
       )}
 
-      {diffFile && (
-        <Card title="Visual Diff">
+      {diffFile && mode !== "data" && (
+        <Card title="Schema Diff">
           <DiffView
             diffFile={diffFile}
             diffViewMode={DiffModeEnum.Split}
@@ -228,23 +245,29 @@ function DiffViewerView({ commits }) {
         </Card>
       )}
 
-      {sqlDiff && mode !== "data" && (
-        <details className="diff-details">
-          <summary>Schema SQL</summary>
-          <pre className="sql-block">
-            {(sqlDiff.schema_sql ?? []).join("\n") || "(none)"}
-          </pre>
-        </details>
-      )}
+      <div className="sql-toggle-row">
+        {sqlDiff && mode !== "data" && (
+          <details className="diff-details" open={showSql.schema}>
+            <summary onClick={() => setShowSql(s => ({ ...s, schema: !s.schema }))}>
+              Schema SQL ({(sqlDiff.schema_sql ?? []).length} statements)
+            </summary>
+            <pre className="sql-block">
+              {(sqlDiff.schema_sql ?? []).join("\n") || "(none)"}
+            </pre>
+          </details>
+        )}
 
-      {sqlDiff && mode !== "schema" && (
-        <details className="diff-details">
-          <summary>Data SQL</summary>
-          <pre className="sql-block">
-            {(sqlDiff.data_sql ?? []).join("\n") || "(none)"}
-          </pre>
-        </details>
-      )}
+        {sqlDiff && mode !== "schema" && (
+          <details className="diff-details" open={showSql.data}>
+            <summary onClick={() => setShowSql(s => ({ ...s, data: !s.data }))}>
+              Data SQL ({(sqlDiff.data_sql ?? []).length} statements)
+            </summary>
+            <pre className="sql-block">
+              {(sqlDiff.data_sql ?? []).join("\n") || "(none)"}
+            </pre>
+          </details>
+        )}
+      </div>
     </div>
   );
 }
@@ -254,6 +277,8 @@ function SchemaBrowserView({ commits }) {
   const [status, setStatus] = useState(null);
   const [tables, setTables] = useState(null);
   const [err, setErr] = useState("");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -272,99 +297,131 @@ function SchemaBrowserView({ commits }) {
         setTables(null);
         return;
       }
+      setLoading(true);
       try {
         setErr("");
         setTables(await getSnapshot(hash));
       } catch (e) {
         setErr(String(e));
+      } finally {
+        setLoading(false);
       }
     })();
   }, [hash]);
 
+  const filteredTables = tables?.filter(t => 
+    t.table_name.toLowerCase().includes(search.toLowerCase()) ||
+    t.ddl?.columns?.some(c => c.name.toLowerCase().includes(search.toLowerCase()))
+  ).sort((a, b) => a.table_name.localeCompare(b.table_name));
+
   return (
     <div className="stack">
-      <Card title="HEAD status">
+      <Card title="Working Directory Status">
         {err && <div className="error-inline">{err}</div>}
-        {status && (
-          <pre className="json-block">
-            {JSON.stringify(status, null, 2)}
-          </pre>
-        )}
-        {!status && !err && (
+        {status ? (
+          <div className="status-grid">
+            {status.modified_tables?.length > 0 && (
+              <div className="status-item modified">
+                <span className="status-label">Modified</span>
+                <span className="status-value">{status.modified_tables.join(", ")}</span>
+              </div>
+            )}
+            {status.added_tables?.length > 0 && (
+              <div className="status-item added">
+                <span className="status-label">Added</span>
+                <span className="status-value">{status.added_tables.join(", ")}</span>
+              </div>
+            )}
+            {status.dropped_tables?.length > 0 && (
+              <div className="status-item dropped">
+                <span className="status-label">Dropped</span>
+                <span className="status-value">{status.dropped_tables.join(", ")}</span>
+              </div>
+            )}
+            {(!status.modified_tables?.length && !status.added_tables?.length && !status.dropped_tables?.length) && (
+              <div className="status-clean">
+                ✓ Working directory clean
+              </div>
+            )}
+          </div>
+        ) : (
           <div className="empty-state">Loading…</div>
         )}
       </Card>
-      <Card title="Schema at commit">
-        <div className="schema-head">
+      <Card title="Schema Browser">
+        <div className="schema-controls">
           <select
             className="field"
             value={hash}
             onChange={(e) => setHash(e.target.value)}
           >
-            <option value="">Select commit…</option>
+            <option value="">Select commit to view schema…</option>
             {commits.map((c) => (
               <option key={c.hash} value={c.hash}>
                 {c.hash.slice(0, 12)} — {c.message}
               </option>
             ))}
           </select>
-          <div className="schema-summary">
-            {tables ? `${tables.length} tables` : "—"}
+          <input
+            className="field search-field"
+            type="text"
+            placeholder="Search tables or columns..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            disabled={!tables}
+          />
+          <div className="schema-count">
+            {tables ? `${filteredTables?.length ?? 0} / ${tables.length} tables` : "—"}
           </div>
         </div>
 
-        {tables && (
-          <div className="table-stack">
-            {tables
-              .slice()
-              .sort((a, b) => a.table_name.localeCompare(b.table_name))
-              .map((t) => (
-                <div key={t.table_name} className="table-card">
-                  <div className="table-card-head">
+        {loading && (
+          <div className="schema-loading">
+            <div className="loading-spinner"></div>
+            <span>Loading schema...</span>
+          </div>
+        )}
+
+        {filteredTables && !loading && (
+          <div className="table-grid">
+            {filteredTables.map((t) => (
+              <div key={t.table_name} className="table-card">
+                <div className="table-card-head">
+                  <div className="table-info">
                     <div className="table-name">{t.table_name}</div>
                     <div className="table-count">{t.row_count} rows</div>
                   </div>
-                  <div className="table-card-body">
-                    <div className="table-wrap">
-                      <table className="schema-table">
-                        <thead>
-                          <tr>
-                            <th>name</th>
-                            <th>type</th>
-                            <th>nullable</th>
-                            <th>key</th>
-                            <th>default</th>
-                            <th>extra</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(t.ddl?.columns ?? []).map((c) => (
-                            <tr key={c.name}>
-                              <td className="mono">{c.name}</td>
-                              <td className="mono">{c.type}</td>
-                              <td>{String(c.nullable)}</td>
-                              <td className="mono">{c.key}</td>
-                              <td className="mono">
-                                {c.default === null ? "null" : String(c.default)}
-                              </td>
-                              <td className="mono">{c.extra}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <details className="ddl-wrap">
-                      <summary className="ddl-summary">
-                        raw DDL
-                      </summary>
-                      <pre className="sql-block compact">
-                        {t.ddl?.raw_ddl ?? "(missing)"}
-                      </pre>
-                    </details>
+                  <div className="table-actions">
+                    <span className="column-count">{t.ddl?.columns?.length ?? 0} cols</span>
                   </div>
                 </div>
-              ))}
+                <div className="table-card-body">
+                  <div className="column-list">
+                    {t.ddl?.columns?.map((c) => (
+                      <div key={c.name} className="column-item">
+                        <code className="column-name">{c.name}</code>
+                        <span className="column-type">{c.type}</span>
+                        {c.key && <span className="column-key">{c.key}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <details className="ddl-wrap">
+                    <summary className="ddl-summary">View DDL</summary>
+                    <pre className="sql-block compact">
+                      {t.ddl?.raw_ddl ?? "(missing)"}
+                    </pre>
+                  </details>
+                </div>
+              </div>
+            ))}
+            {filteredTables.length === 0 && (
+              <div className="empty-state">No tables match your search</div>
+            )}
           </div>
+        )}
+        
+        {!tables && !loading && (
+          <div className="empty-state">Select a commit to view its schema</div>
         )}
       </Card>
     </div>
@@ -400,17 +457,42 @@ export default function App() {
     })();
   }, []);
 
-  // Repo change triggers commit refresh
   useEffect(() => {
     if (!repoId) return;
     refresh();
-    // eslint-disable-next-line
   }, [repoId]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     window.localStorage.setItem("gitdb-theme", theme);
   }, [theme]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      
+      if (e.key === "1" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPage("graph");
+      } else if (e.key === "2" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPage("diff");
+      } else if (e.key === "3" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPage("schema");
+      } else if ((e.key === "r" || e.key === "R") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        refresh();
+      } else if (e.key === "t" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setTheme(t => t === "light" ? "dark" : "light");
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   async function refresh() {
     setErr("");
@@ -453,8 +535,12 @@ export default function App() {
     }
   }
 
-  function toggleTheme(event) {
+  const toggleTheme = (event) => {
     const nextTheme = theme === "light" ? "dark" : "light";
+    if (!event) {
+      setTheme(nextTheme);
+      return;
+    }
     const x = event.clientX;
     const y = event.clientY;
     const endRadius = Math.hypot(
@@ -495,34 +581,51 @@ export default function App() {
       .catch(() => {
         applyTheme();
       });
-  }
+  };
 
   // Login form if not logged in
   if (!user) {
     return (
       <div className="login-shell">
-        <form className="login-form" onSubmit={handleLogin}>
-          <h2>Login to GitDB</h2>
-          <input
-            className="field"
-            type="text"
-            placeholder="Username"
-            value={loginState.username}
-            onChange={e => setLoginState(s => ({ ...s, username: e.target.value }))}
-            autoFocus
-            required
-          />
-          <input
-            className="field"
-            type="password"
-            placeholder="Password"
-            value={loginState.password}
-            onChange={e => setLoginState(s => ({ ...s, password: e.target.value }))}
-            required
-          />
-          <button className="btn btn-primary" type="submit">Login</button>
-          {loginState.error && <div className="error-inline">{loginState.error}</div>}
-        </form>
+        <div className="login-card">
+          <div className="login-header">
+            <div className="brand-mark">G</div>
+            <h1>GitDB</h1>
+            <p>Database Version Control</p>
+          </div>
+          <form className="login-form" onSubmit={handleLogin}>
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                className="field"
+                type="text"
+                placeholder="Enter username"
+                value={loginState.username}
+                onChange={e => setLoginState(s => ({ ...s, username: e.target.value }))}
+                autoFocus
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                className="field"
+                type="password"
+                placeholder="Enter password"
+                value={loginState.password}
+                onChange={e => setLoginState(s => ({ ...s, password: e.target.value }))}
+                required
+              />
+            </div>
+            {loginState.error && <div className="error-inline">{loginState.error}</div>}
+            <button className="btn btn-primary btn-lg" type="submit">Sign In</button>
+          </form>
+          <div className="login-footer">
+            Press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> to switch views
+          </div>
+        </div>
       </div>
     );
   }

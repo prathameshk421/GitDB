@@ -54,6 +54,18 @@ def restore_schema_from_snapshot(conn, snapshot: dict[str, TableSnapshot]) -> No
             cursor.execute(str(raw))
 
 
+def _tables_exist(conn) -> bool:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+        """,
+    )
+    return cursor.fetchone()[0] > 0
+
+
 def apply_checkout(
     conn,
     *,
@@ -67,6 +79,18 @@ def apply_checkout(
     """
     cursor = conn.cursor()
     recovery_path: str | None = None
+
+    # Phase 0: ensure schema exists (for empty target DB or missing tables)
+    if not diff.schema_sql and old_snapshot and not _tables_exist(conn):
+        try:
+            restore_schema_from_snapshot(conn, old_snapshot)
+        except Exception as e:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            recovery_path = write_recovery_file(
+                old_snapshot,
+                path=recovery_file_path or f".gitdb/recovery_{ts}.sql",
+            )
+            raise CheckoutSchemaError(str(e)) from e
 
     # Phase 1: schema (DDL auto-commits in MySQL)
     for stmt in diff.schema_sql:

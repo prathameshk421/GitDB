@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from getpass import getpass
-from pathlib import Path
+import os
 import json
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -10,6 +10,7 @@ from rich.table import Table
 from rich.panel import Panel
 from argon2 import PasswordHasher
 import keyring
+from getpass import getpass
 
 from engine.db import (
     config_path,
@@ -19,6 +20,8 @@ from engine.db import (
     keyring_username,
     load_repo_config,
     get_repo_password,
+    set_meta_password_in_keyring,
+    get_meta_password_from_keyring,
 )
 from engine.snapshot import capture_snapshot, snapshot_to_json
 from engine.hash import compute_commit_hash
@@ -26,8 +29,58 @@ from engine.diff import DiffResult, diff_snapshots, load_snapshot_from_row
 from engine.checkout import apply_checkout
 
 
+SESSION_FILE = os.path.expanduser("~/.gitdb_session.json")
 console = Console()
 ph = PasswordHasher()
+
+
+def save_session(user):
+    with open(SESSION_FILE, "w", encoding="utf-8") as f:
+        json.dump(user, f)
+
+
+def load_session():
+    if not os.path.exists(SESSION_FILE):
+        return None
+    with open(SESSION_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def clear_session():
+    if os.path.exists(SESSION_FILE):
+        os.remove(SESSION_FILE)
+
+
+@click.group()
+def gitdb():
+    """GitDB: Git-like version control for MySQL databases."""
+
+
+@gitdb.command()
+def login():
+    """Authenticate and store session for CLI usage."""
+    host = click.prompt("API host", default="http://127.0.0.1:5000")
+    username = click.prompt("Username")
+    password = getpass("Password (will not echo): ")
+    import requests
+    try:
+        r = requests.post(f"{host}/login", json={"username": username, "password": password})
+        r.raise_for_status()
+        user = r.json().get("user")
+        if not user:
+            raise Exception("No user info returned.")
+        user["api_host"] = host
+        save_session(user)
+        console.print(f"[green]Logged in as {user['username']}[/green]")
+    except Exception as e:
+        console.print(f"[red]Login failed: {e}[/red]")
+
+
+@gitdb.command()
+def logout():
+    """Clear CLI session."""
+    clear_session()
+    console.print("[yellow]Logged out.[/yellow]")
 
 
 def _ensure_schema(meta_conn) -> None:
@@ -97,10 +150,13 @@ def _set_head_hash(meta_conn, repo_id: int, new_hash: str | None) -> None:
 
 
 def _load_commit_snapshots(meta_conn, commit_hash: str) -> dict[str, "engine.snapshot.TableSnapshot"]:
+    full_hash = _resolve_short_hash(meta_conn, commit_hash)
+    if not full_hash:
+        return {}
     cur = meta_conn.cursor()
     cur.execute(
         "SELECT table_name, ddl_json, rows_json FROM snapshots WHERE commit_hash = %s",
-        (commit_hash,),
+        (full_hash,),
     )
     out = {}
     for table_name, ddl_json, rows_json in cur.fetchall():
@@ -108,9 +164,11 @@ def _load_commit_snapshots(meta_conn, commit_hash: str) -> dict[str, "engine.sna
     return out
 
 
-@click.group()
-def gitdb():
-    """GitDB: Git-like version control for MySQL databases."""
+def _resolve_short_hash(meta_conn, short_hash: str) -> str:
+    cur = meta_conn.cursor()
+    cur.execute("SELECT hash FROM commits WHERE hash LIKE %s", (f"{short_hash}%",))
+    r = cur.fetchone()
+    return r[0] if r else None
 
 
 @gitdb.command()
@@ -136,17 +194,33 @@ def register():
     conn = connect_mysql(host=host, port=port, user=user, password=password, database="gitdb_meta")
     _ensure_schema(conn)
 
-    pw_hash = ph.hash(gitdb_password)
     cur = conn.cursor()
+    cur.execute("SELECT user_id FROM user WHERE username = %s OR email = %s", (username, email))
+    existing = cur.fetchone()
+    if existing:
+        raise click.ClickException(f"User '{username}' or email '{email}' already exists. Try login instead.")
+
     cur.execute(
         """
         INSERT INTO user (username, email, password_hash, full_name, is_active)
         VALUES (%s, %s, %s, %s, TRUE)
         """,
-        (username, email, pw_hash, full_name),
+        (username, email, ph.hash(gitdb_password), full_name),
     )
+    user_id = cur.lastrowid
     conn.commit()
-    console.print(f"[green]Registered user_id={cur.lastrowid}[/green]")
+
+    gitdb_dir().mkdir(parents=True, exist_ok=True)
+    config = {
+        "host": host,
+        "port": port,
+        "db_user": user,
+        "db_name": "gitdb_meta",
+    }
+    config_path().write_text(json.dumps(config, indent=2), encoding="utf-8")
+    set_meta_password_in_keyring(password)
+    console.print(f"[green]Registered user_id={user_id}[/green]")
+    console.print(f"[green]Created .gitdb/config.json for API auth[/green]")
 
 
 @gitdb.command()
@@ -344,12 +418,16 @@ def checkout(commit_hash: str):
     target_conn = connect_mysql(host=cfg.host, port=cfg.port, user=cfg.db_user, password=pw, database=cfg.db_name)
     meta_conn = connect_mysql(host=cfg.host, port=cfg.port, user=cfg.db_user, password=pw, database="gitdb_meta")
 
+    full_hash = _resolve_short_hash(meta_conn, commit_hash)
+    if not full_hash:
+        raise click.ClickException(f"Commit not found: {commit_hash}")
+
     head = _get_head_hash(meta_conn, cfg.repo_id)
     if not head:
         raise click.ClickException("No HEAD commit to diff from. Create a commit first.")
 
     old_snap = _load_commit_snapshots(meta_conn, head)
-    new_snap = _load_commit_snapshots(meta_conn, commit_hash)
+    new_snap = _load_commit_snapshots(meta_conn, full_hash)
     res = diff_snapshots(old_snap, new_snap)
 
     try:
@@ -363,7 +441,7 @@ def checkout(commit_hash: str):
         console.print(Panel(msg, title="Checkout failed", style="red"))
         raise
 
-    _set_head_hash(meta_conn, cfg.repo_id, commit_hash)
+    _set_head_hash(meta_conn, cfg.repo_id, full_hash)
     if recovery:
         console.print(Panel(f"Recovery file: {recovery}", title="Recovery", style="yellow"))
     console.print(f"[green]Checked out {commit_hash}[/green]")
@@ -412,6 +490,67 @@ def status():
             lines.append(f"  - {t}: {a} -> {b}")
 
     console.print(Panel("\n".join(lines) if lines else "Clean.", title="Status"))
+
+
+@gitdb.command()
+@click.option("--author", required=True, help="GitDB username (must exist in gitdb_meta.user).")
+def switch(author: str):
+    """Switch to a different repository."""
+    cfg = load_repo_config()
+    pw = get_repo_password(cfg.repo_id) if cfg.repo_id else None
+    if not pw:
+        pw = get_meta_password_from_keyring()
+    
+    meta_conn = connect_mysql(host=cfg.host, port=cfg.port, user=cfg.db_user, password=pw, database="gitdb_meta")
+    
+    author_id = _get_active_user_id(meta_conn, author)
+    if not author_id:
+        raise click.ClickException(f"Author '{author}' not found or inactive.")
+    
+    cur = meta_conn.cursor()
+    cur.execute(
+        "SELECT repo_id, repo_name, target_db_name, db_host, db_port, db_user FROM repository WHERE user_id = %s",
+        (author_id,),
+    )
+    repos = cur.fetchall()
+    
+    if not repos:
+        raise click.ClickException(f"No repositories found for user '{author}'. Run `gitdb init` first.")
+    
+    table = Table(title="Available Repositories")
+    table.add_column("#", style="cyan")
+    table.add_column("repo_id")
+    table.add_column("repo_name")
+    table.add_column("target_db")
+    
+    for i, r in enumerate(repos, 1):
+        table.add_row(str(i), str(r[0]), r[1], r[2])
+    console.print(table)
+    
+    choice = click.prompt("Select repository #", type=int, default=1)
+    if choice < 1 or choice > len(repos):
+        raise click.ClickException("Invalid selection.")
+    
+    selected = repos[choice - 1]
+    repo_id = selected[0]
+    target_db = selected[2]
+    target_host = selected[3]
+    target_port = selected[4]
+    target_user = selected[5]
+    
+    target_password = getpass(f"Password for {target_user}@{target_host} (will not echo): ")
+    
+    new_config = {
+        "repo_id": repo_id,
+        "host": target_host,
+        "port": target_port,
+        "db_user": target_user,
+        "db_name": target_db,
+    }
+    config_path().write_text(json.dumps(new_config, indent=2), encoding="utf-8")
+    keyring.set_password(keyring_service(repo_id), keyring_username(repo_id), target_password)
+    
+    console.print(Panel.fit(f"[green]Switched to repo '{selected[1]}' (repo_id={repo_id})[/green]"))
 
 
 if __name__ == "__main__":

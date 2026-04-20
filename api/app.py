@@ -18,16 +18,12 @@ def create_app() -> Flask:
     CORS(app, supports_credentials=True)
     ph = PasswordHasher()
 
-    def get_db():
-        # Use config for now; in future, use per-user DB config
-        return connect_meta_db(load_repo_config())
-
     @app.post("/login")
     def login():
         data = request.json
         username = data.get("username")
         password = data.get("password")
-        db = get_db()
+        db = connect_meta_db()
         cur = db.cursor()
         cur.execute("SELECT user_id, password_hash, is_active, full_name, email FROM user WHERE username = %s", (username,))
         row = cur.fetchone()
@@ -56,7 +52,7 @@ def create_app() -> Flask:
     def repositories():
         if "user_id" not in session:
             return jsonify({"error": "Not authenticated"}), 401
-        db = get_db()
+        db = connect_meta_db()
         cur = db.cursor()
         cur.execute("SELECT repo_id, repo_name, target_db_name, db_host, db_port FROM repository WHERE user_id = %s", (session["user_id"],))
         repos = [

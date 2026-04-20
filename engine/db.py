@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import json
+import os
 
 import keyring
 import mysql.connector
@@ -10,9 +11,24 @@ import mysql.connector
 from .errors import ConfigError
 
 
+def get_env_db_config():
+    host = os.environ.get("GITDB_META_HOST")
+    port = os.environ.get("GITDB_META_PORT", "3306")
+    user = os.environ.get("GITDB_META_USER")
+    password = os.environ.get("GITDB_META_PASSWORD")
+    if host and user and password:
+        return {
+            "host": host,
+            "port": int(port),
+            "user": user,
+            "password": password,
+        }
+    return None
+
+
 @dataclass(frozen=True)
 class RepoConfig:
-    repo_id: int
+    repo_id: int | None
     host: str
     port: int
     db_user: str
@@ -34,7 +50,7 @@ def load_repo_config() -> RepoConfig:
     try:
         raw = json.loads(p.read_text(encoding="utf-8"))
         return RepoConfig(
-            repo_id=int(raw["repo_id"]),
+            repo_id=int(raw["repo_id"]) if raw.get("repo_id") else None,
             host=str(raw["host"]),
             port=int(raw.get("port", 3306)),
             db_user=str(raw["db_user"]),
@@ -44,12 +60,24 @@ def load_repo_config() -> RepoConfig:
         raise ConfigError(f"Invalid .gitdb/config.json: {e}") from e
 
 
+META_KEYRING_SERVICE = "gitdb_meta"
+META_KEYRING_USER = "meta"
+
+
 def keyring_service(repo_id: int) -> str:
     return "gitdb"
 
 
 def keyring_username(repo_id: int) -> str:
     return f"repo_{repo_id}"
+
+
+def get_meta_password_from_keyring() -> str | None:
+    return keyring.get_password(META_KEYRING_SERVICE, META_KEYRING_USER)
+
+
+def set_meta_password_in_keyring(password: str) -> None:
+    keyring.set_password(META_KEYRING_SERVICE, META_KEYRING_USER, password)
 
 
 def get_repo_password(repo_id: int) -> str:
@@ -89,13 +117,57 @@ def connect_target_db(cfg: RepoConfig):
     )
 
 
-def connect_meta_db(cfg: RepoConfig):
-    # gitdb_meta lives on same server; uses same credentials.
+def get_meta_password(cfg: RepoConfig | None = None) -> str:
+    if cfg and cfg.repo_id is not None:
+        return get_repo_password(cfg.repo_id)
+    env_cfg = get_env_db_config()
+    if env_cfg:
+        return env_cfg["password"]
+    meta_pw = get_meta_password_from_keyring()
+    if meta_pw is not None:
+        return meta_pw
+    raise ConfigError("Meta DB password not found. Run `gitdb register` first.")
+
+
+def connect_meta_db(cfg: RepoConfig | None = None):
+    if cfg:
+        password = get_meta_password(cfg)
+        return connect_mysql(
+            host=cfg.host,
+            port=cfg.port,
+            user=cfg.db_user,
+            password=password,
+            database="gitdb_meta",
+        )
+    password = get_meta_password()
+    env_cfg = get_env_db_config()
+    if env_cfg:
+        return connect_mysql(
+            host=env_cfg["host"],
+            port=env_cfg["port"],
+            user=env_cfg["user"],
+            password=password,
+            database="gitdb_meta",
+        )
+    cfg = load_repo_config()
     return connect_mysql(
         host=cfg.host,
         port=cfg.port,
         user=cfg.db_user,
-        password=get_repo_password(cfg.repo_id),
+        password=password,
         database="gitdb_meta",
     )
+
+
+def connect_meta_db_from_env():
+    env_cfg = get_env_db_config()
+    if env_cfg:
+        return connect_mysql(
+            host=env_cfg["host"],
+            port=env_cfg["port"],
+            user=env_cfg["user"],
+            password=env_cfg["password"],
+            database="gitdb_meta",
+        )
+    return None
 
