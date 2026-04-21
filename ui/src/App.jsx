@@ -659,7 +659,7 @@ export default function App() {
             <div className="topbar-subtitle">
               API endpoint: <span className="mono">{API_BASE}</span>
             </div>
-            {repos.length > 1 && repoSelector}
+            {repos.length >= 1 && repoSelector}
           </div>
           <div className="topbar-actions">
             <span className="user-info">{user.username}</span>
