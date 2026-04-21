@@ -455,9 +455,32 @@ def status():
     target_conn = connect_mysql(host=cfg.host, port=cfg.port, user=cfg.db_user, password=pw, database=cfg.db_name)
     meta_conn = connect_mysql(host=cfg.host, port=cfg.port, user=cfg.db_user, password=pw, database="gitdb_meta")
 
+    repo_row = _get_repo_row(meta_conn, cfg.repo_id)
+    repo_name = repo_row[2] if repo_row else "Unknown"
+    owner_id = repo_row[1] if repo_row else None
+    owner_str = "Unknown"
+    if owner_id:
+        cur = meta_conn.cursor()
+        cur.execute("SELECT username, full_name FROM user WHERE user_id = %s", (owner_id,))
+        u = cur.fetchone()
+        if u:
+            owner_str = f"{u[1]} (@{u[0]})"
+    
+    session = load_session()
+    cli_user = session.get("username", "Not logged in") if session else "Not logged in"
+
+    lines = [
+        f"[bold cyan]Repository:[/bold cyan] {repo_name} (ID: {cfg.repo_id})",
+        f"[bold cyan]Owner:[/bold cyan] {owner_str}",
+        f"[bold cyan]Target DB:[/bold cyan] {cfg.db_name} @ {cfg.host}:{cfg.port} (user: {cfg.db_user})",
+        f"[bold cyan]CLI Session:[/bold cyan] {cli_user}",
+        "─" * 40,
+    ]
+
     head = _get_head_hash(meta_conn, cfg.repo_id)
     if not head:
-        console.print("[yellow]No commits yet.[/yellow]")
+        lines.append("[yellow]No commits yet.[/yellow]")
+        console.print(Panel("\n".join(lines), title="Status"))
         return
 
     head_snap = _load_commit_snapshots(meta_conn, head)
@@ -477,7 +500,6 @@ def status():
         if head_snap[t].row_count != live_snap[t].row_count:
             row_deltas.append((t, head_snap[t].row_count, live_snap[t].row_count))
 
-    lines = []
     if added:
         lines.append("Added tables: " + ", ".join(f"`{t}`" for t in added))
     if dropped:
@@ -489,7 +511,10 @@ def status():
         for (t, a, b) in row_deltas:
             lines.append(f"  - {t}: {a} -> {b}")
 
-    console.print(Panel("\n".join(lines) if lines else "Clean.", title="Status"))
+    if not (added or dropped or modified or row_deltas):
+        lines.append("Clean.")
+
+    console.print(Panel("\n".join(lines), title="Status"))
 
 
 @gitdb.command()
