@@ -35,7 +35,7 @@ cleanup() {
 
 trap cleanup INT TERM EXIT
 
-echo "Starting Flask API on http://127.0.0.1:5000 ..."
+echo "Starting Flask API on http://127.0.0.1:5001 ..."
 (
   cd "$ROOT_DIR"
   python -m api.app

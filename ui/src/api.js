@@ -1,3 +1,5 @@
+const API_BASE = import.meta.env.VITE_API_BASE ?? `http://${window.location.hostname}:5001`;
+
 // Auth/session helpers
 export async function login(username, password) {
   const r = await fetch(`${API_BASE}/login`, {
@@ -34,34 +36,37 @@ export async function getRepositories() {
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:5000";
-
-export async function getCommits() {
-  const r = await fetch(`${API_BASE}/commits`);
+export async function getCommits(repoId) {
+  const params = repoId ? `?repo_id=${repoId}` : "";
+  const r = await fetch(`${API_BASE}/commits${params}`);
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }
 
-export async function getDiff(hash1, hash2) {
-  const r = await fetch(`${API_BASE}/diff/${hash1}/${hash2}`);
+export async function getDiff(hash1, hash2, repoId) {
+  const params = repoId ? `?repo_id=${repoId}` : "";
+  const r = await fetch(`${API_BASE}/diff/${hash1}/${hash2}${params}`);
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }
 
-export async function postCheckout(hash) {
-  const r = await fetch(`${API_BASE}/checkout/${hash}`, { method: "POST" });
+export async function postCheckout(hash, repoId) {
+  const params = repoId ? `?repo_id=${repoId}` : "";
+  const r = await fetch(`${API_BASE}/checkout/${hash}${params}`, { method: "POST" });
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }
 
-export async function getStatus() {
-  const r = await fetch(`${API_BASE}/status`);
+export async function getStatus(repoId) {
+  const params = repoId ? `?repo_id=${repoId}` : "";
+  const r = await fetch(`${API_BASE}/status${params}`);
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }
 
-export async function getSnapshot(hash) {
-  const r = await fetch(`${API_BASE}/snapshot/${hash}`);
+export async function getSnapshot(hash, repoId) {
+  const params = repoId ? `?repo_id=${repoId}` : "";
+  const r = await fetch(`${API_BASE}/snapshot/${hash}${params}`);
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }

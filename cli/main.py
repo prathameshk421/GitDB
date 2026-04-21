@@ -59,7 +59,7 @@ def gitdb():
 @gitdb.command()
 def login():
     """Authenticate and store session for CLI usage."""
-    host = click.prompt("API host", default="http://127.0.0.1:5000")
+    host = click.prompt("API host", default="http://127.0.0.1:5001")
     username = click.prompt("Username")
     password = getpass("Password (will not echo): ")
     import requests

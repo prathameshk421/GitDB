@@ -124,7 +124,7 @@ function CommitGraphView({ commits, onCheckout }) {
   );
 }
 
-function DiffViewerView({ commits }) {
+function DiffViewerView({ commits, repoId }) {
   const [h1, setH1] = useState("");
   const [h2, setH2] = useState("");
   const [mode, setMode] = useState("both");
@@ -134,14 +134,22 @@ function DiffViewerView({ commits }) {
   const [loading, setLoading] = useState(false);
   const [showSql, setShowSql] = useState({ schema: true, data: true });
 
+  useEffect(() => {
+    setH1("");
+    setH2("");
+    setDiffFile(null);
+    setSqlDiff(null);
+    setErr("");
+  }, [repoId]);
+
   async function run() {
     setErr("");
     setLoading(true);
     try {
       const [snapshot1, snapshot2, sqlRes] = await Promise.all([
-        getSnapshot(h1),
-        getSnapshot(h2),
-        getDiff(h1, h2)
+        getSnapshot(h1, repoId),
+        getSnapshot(h2, repoId),
+        getDiff(h1, h2, repoId)
       ]);
 
       const oldText = snapshotToDDLText(snapshot1);
@@ -272,7 +280,7 @@ function DiffViewerView({ commits }) {
   );
 }
 
-function SchemaBrowserView({ commits }) {
+function SchemaBrowserView({ commits, repoId }) {
   const [hash, setHash] = useState("");
   const [status, setStatus] = useState(null);
   const [tables, setTables] = useState(null);
@@ -281,15 +289,19 @@ function SchemaBrowserView({ commits }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setHash("");
+    setTables(null);
+    setSearch("");
     (async () => {
+      if (!repoId) return;
       try {
         setErr("");
-        setStatus(await getStatus());
+        setStatus(await getStatus(repoId));
       } catch (e) {
         setErr(String(e));
       }
     })();
-  }, []);
+  }, [repoId]);
 
   useEffect(() => {
     (async () => {
@@ -300,7 +312,7 @@ function SchemaBrowserView({ commits }) {
       setLoading(true);
       try {
         setErr("");
-        setTables(await getSnapshot(hash));
+        setTables(await getSnapshot(hash, repoId));
       } catch (e) {
         setErr(String(e));
       } finally {
@@ -497,7 +509,7 @@ export default function App() {
   async function refresh() {
     setErr("");
     try {
-      setCommits(await getCommits());
+      setCommits(await getCommits(repoId));
     } catch (e) {
       setErr(String(e));
     }
@@ -527,7 +539,7 @@ export default function App() {
 
   async function onCheckout(hash) {
     try {
-      await postCheckout(hash);
+      await postCheckout(hash, repoId);
       await refresh();
       alert("Checkout complete.");
     } catch (e) {
@@ -687,8 +699,8 @@ export default function App() {
         {page === "graph" && (
           <CommitGraphView commits={commits} onCheckout={onCheckout} />
         )}
-        {page === "diff" && <DiffViewerView commits={commits} />}
-        {page === "schema" && <SchemaBrowserView commits={commits} />}
+        {page === "diff" && <DiffViewerView commits={commits} repoId={repoId} />}
+        {page === "schema" && <SchemaBrowserView commits={commits} repoId={repoId} />}
       </main>
     </div>
   );

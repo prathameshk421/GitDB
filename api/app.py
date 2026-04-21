@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 
-from engine.db import load_repo_config, connect_meta_db, connect_target_db
+from engine.db import load_repo_config, connect_meta_db, connect_target_db, RepoConfig
 import mysql.connector
 from argon2 import PasswordHasher
 from engine.diff import diff_snapshots, load_snapshot_from_row
@@ -12,10 +12,34 @@ from engine.snapshot import capture_snapshot
 
 
 
+def get_repo_config_for_request() -> RepoConfig:
+    repo_id_str = request.args.get("repo_id")
+    if repo_id_str:
+        repo_id = int(repo_id_str)
+        meta = connect_meta_db()
+        cur = meta.cursor()
+        cur.execute("SELECT repo_id, target_db_name, db_host, db_port, db_user FROM repository WHERE repo_id = %s", (repo_id,))
+        row = cur.fetchone()
+        if not row:
+            from engine.errors import ConfigError
+            raise ConfigError("Repository not found")
+        return RepoConfig(
+            repo_id=row[0],
+            db_name=row[1],
+            host=row[2],
+            port=row[3],
+            db_user=row[4]
+        )
+    return load_repo_config()
+
 def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = "gitdb-very-secret-key"  # TODO: use env var in prod
-    CORS(app, supports_credentials=True)
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = False
+    app.config["PERMANENT_SESSION_LIFETIME"] = 3600 * 24  # 24 hours
+    CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:3000", "http://localhost:3000"], allow_headers=["Content-Type"])
     ph = PasswordHasher()
 
     @app.post("/login")
@@ -33,6 +57,7 @@ def create_app() -> Flask:
             ph.verify(row[1], password)
         except Exception:
             return jsonify({"error": "Invalid password"}), 401
+        session.permanent = True
         session["user_id"] = row[0]
         session["username"] = username
         return jsonify({"ok": True, "user": {"user_id": row[0], "username": username, "full_name": row[3], "email": row[4]}})
@@ -62,7 +87,7 @@ def create_app() -> Flask:
 
     @app.get("/commits")
     def commits():
-        cfg = load_repo_config()
+        cfg = get_repo_config_for_request()
         meta = connect_meta_db(cfg)
         cur = meta.cursor()
         cur.execute(
@@ -89,7 +114,7 @@ def create_app() -> Flask:
         return jsonify(rows)
 
     def _diff_impl(hash1: str, hash2: str):
-        cfg = load_repo_config()
+        cfg = get_repo_config_for_request()
         meta = connect_meta_db(cfg)
         cur = meta.cursor()
         cur.execute(
@@ -121,7 +146,7 @@ def create_app() -> Flask:
 
     @app.get("/snapshot/<commit_hash>")
     def snapshot(commit_hash: str):
-        cfg = load_repo_config()
+        cfg = get_repo_config_for_request()
         meta = connect_meta_db(cfg)
         cur = meta.cursor()
         cur.execute(
@@ -143,7 +168,7 @@ def create_app() -> Flask:
 
     @app.post("/checkout/<commit_hash>")
     def checkout(commit_hash: str):
-        cfg = load_repo_config()
+        cfg = get_repo_config_for_request()
         meta = connect_meta_db(cfg)
         target = connect_target_db(cfg)
         cur = meta.cursor()
@@ -188,7 +213,7 @@ def create_app() -> Flask:
 
     @app.get("/status")
     def status():
-        cfg = load_repo_config()
+        cfg = get_repo_config_for_request()
         meta = connect_meta_db(cfg)
         target = connect_target_db(cfg)
         cur = meta.cursor()
@@ -240,5 +265,5 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5001, debug=True)
 
